@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'wouter'
 import { cn } from '@/lib/utils'
+import OperationalMap from '@/components/map/OperationalMap'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -124,44 +125,10 @@ export default function Dashboard() {
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Station</span>
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" /> Camp</span>
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400" /> Vessel</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-violet-400" /> Port</span>
             </div>
           </div>
-          <div className="relative h-[340px] bg-gradient-to-b from-ice-900/60 to-ice-950 overflow-hidden">
-            <svg viewBox="0 0 800 400" className="absolute inset-0 w-full h-full opacity-40">
-              <defs>
-                <radialGradient id="pg" cx="50%" cy="70%" r="55%">
-                  <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.35" />
-                  <stop offset="100%" stopColor="#020617" stopOpacity="0" />
-                </radialGradient>
-              </defs>
-              <ellipse cx="400" cy="280" rx="300" ry="130" fill="url(#pg)" />
-              <path d="M180,300 Q300,190 400,210 T620,300 Q500,360 400,350 T180,300" fill="rgba(148,163,184,0.12)" stroke="rgba(34,211,238,0.2)" strokeWidth="1" />
-            </svg>
-            {locations.map((loc, i) => (
-              <motion.div
-                key={loc.name}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.4 + i * 0.1, type: 'spring', stiffness: 200 }}
-                className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
-                style={{ left: loc.left, top: loc.top }}
-              >
-                <div className={cn(
-                  'w-4 h-4 rounded-full border-2 border-white shadow-lg pin-pulse',
-                  loc.status === 'alert' ? 'bg-red-500' : loc.status === 'transit' ? 'bg-blue-500' : 'bg-emerald-500'
-                )} />
-                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                  <div className="glass-strong rounded-lg px-3 py-2 text-xs whitespace-nowrap border border-ice-700 shadow-xl">
-                    <p className="font-semibold text-ice-100">{loc.name}</p>
-                    <p className="text-ice-400">{loc.personnel} pax · {loc.cargo} cargo</p>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-            <div className="absolute bottom-3 left-4 text-[10px] text-ice-600 flex items-center gap-1.5">
-              <Ship className="w-3 h-3" /> India → Southern Ocean → Antarctica
-            </div>
-          </div>
+          <OperationalMap />
         </motion.div>
 
         {/* Alerts */}
