@@ -10,6 +10,7 @@ import {
   type StationPack,
 } from '@/lib/offlineMapTiles'
 import PolarisMap, { type MapMarker } from './PolarisMap'
+import MapErrorBoundary from './MapErrorBoundary'
 import { STATIONS } from '@/lib/offlineEmergencies'
 
 type EmergencyPin = {
@@ -29,25 +30,22 @@ type Props = {
 const PACK_STATIONS: StationPack[] = [
   { id: 'maitri', name: 'Maitri', lat: -70.767, lng: 11.733, radius: 2 },
   { id: 'bharati', name: 'Bharati', lat: -69.407, lng: 76.187, radius: 2 },
-  { id: 'camp-a', name: 'Field Camp A', lat: -70.55, lng: 11.9, radius: 1 },
-  { id: 'camp-b', name: 'Field Camp B', lat: -70.82, lng: 11.45, radius: 1 },
-  { id: 'overview', name: 'Polar overview', lat: -70.0, lng: 40.0, radius: 1, zooms: [3, 4, 5, 6] },
+  { id: 'overview', name: 'Overview', lat: -70, lng: 40, radius: 1, zooms: [3, 4, 5, 6] },
 ]
 
 export default function OfflineTileMap({ emergencies = [], className, height = 420 }: Props) {
-  const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true)
+  const [online, setOnline] = useState(true)
   const [tileCount, setTileCount] = useState(0)
   const [progress, setProgress] = useState<PackProgress | null>(null)
   const [downloading, setDownloading] = useState(false)
 
-  const refreshCount = async () => setTileCount(await countCachedTiles())
-
   useEffect(() => {
+    setOnline(typeof navigator !== 'undefined' ? navigator.onLine : true)
     const on = () => setOnline(true)
     const off = () => setOnline(false)
     window.addEventListener('online', on)
     window.addEventListener('offline', off)
-    refreshCount()
+    countCachedTiles().then(setTileCount).catch(() => {})
     return () => {
       window.removeEventListener('online', on)
       window.removeEventListener('offline', off)
@@ -55,16 +53,20 @@ export default function OfflineTileMap({ emergencies = [], className, height = 4
   }, [])
 
   const markers: MapMarker[] = [
-    ...STATIONS.map(s => ({
+    ...(STATIONS || []).map(s => ({
       id: s.id,
       lat: s.lat,
       lng: s.lng,
       label: s.name,
-      kind: (s.type === 'station' ? 'station' : s.type === 'camp' ? 'camp' : 'vessel') as MapMarker['kind'],
+      kind: (s.type === 'station'
+        ? 'station'
+        : s.type === 'camp'
+          ? 'camp'
+          : 'vessel') as MapMarker['kind'],
       color: s.type === 'station' ? '#10b981' : s.type === 'camp' ? '#f59e0b' : '#38bdf8',
     })),
-    ...emergencies
-      .filter(e => e.lat != null && e.lng != null)
+    ...(emergencies || [])
+      .filter(e => e && e.lat != null && e.lng != null)
       .map(e => ({
         id: e.id,
         lat: e.lat,
@@ -83,20 +85,13 @@ export default function OfflineTileMap({ emergencies = [], className, height = 4
     setDownloading(true)
     try {
       await downloadOfflinePack(PACK_STATIONS, p => setProgress(p))
-      await refreshCount()
+      setTileCount(await countCachedTiles())
       toast.success('Offline pack saved')
     } catch (e: any) {
-      toast.error(e.message || 'Download failed')
+      toast.error(e?.message || 'Download failed')
     } finally {
       setDownloading(false)
     }
-  }
-
-  const handleClear = async () => {
-    await clearTileCache()
-    await refreshCount()
-    setProgress(null)
-    toast.message('Tile cache cleared')
   }
 
   const h = Math.max(height || 420, 320)
@@ -117,7 +112,7 @@ export default function OfflineTileMap({ emergencies = [], className, height = 4
         </span>
         <span className="text-xs text-ice-500 flex items-center gap-1">
           <MapIcon className="w-3.5 h-3.5" />
-          {tileCount.toLocaleString()} tiles cached
+          {tileCount} tiles cached
         </span>
         <div className="flex-1" />
         <button
@@ -131,35 +126,27 @@ export default function OfflineTileMap({ emergencies = [], className, height = 4
         </button>
         <button
           type="button"
-          onClick={handleClear}
-          className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-ice-700 text-ice-400 hover:text-ice-200"
+          onClick={async () => {
+            await clearTileCache()
+            setTileCount(0)
+            setProgress(null)
+            toast.message('Cache cleared')
+          }}
+          className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-ice-700 text-ice-400"
         >
           <Trash2 className="w-3.5 h-3.5" /> Clear
         </button>
       </div>
 
-      {progress && progress.status === 'downloading' && (
-        <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 px-3 py-2">
-          <div className="flex justify-between text-xs text-cyan-300 mb-1">
-            <span>{progress.message}</span>
-            <span>{progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%</span>
-          </div>
-          <div className="h-1.5 rounded-full bg-ice-800 overflow-hidden">
-            <div
-              className="h-full bg-cyan-500 transition-all"
-              style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }}
-            />
-          </div>
-        </div>
+      {progress?.status === 'downloading' && (
+        <div className="text-xs text-cyan-300">{progress.message}</div>
       )}
 
       <div className="rounded-xl overflow-hidden border border-ice-800/50" style={{ height: h }}>
-        <PolarisMap height={h} center={[-65, 40]} zoom={3} markers={markers} />
+        <MapErrorBoundary height={h}>
+          <PolarisMap height={h} center={[-65, 40]} zoom={3} markers={markers} />
+        </MapErrorBoundary>
       </div>
-
-      <p className="text-[11px] text-ice-500">
-        Satellite map (Esri). Offline pack stores tiles in IndexedDB for use without internet.
-      </p>
     </div>
   )
 }

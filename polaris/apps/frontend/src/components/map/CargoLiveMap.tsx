@@ -1,4 +1,5 @@
 import PolarisMap, { type MapMarker, type MapRoute } from './PolarisMap'
+import MapErrorBoundary from './MapErrorBoundary'
 import {
   CARGO_SHIPMENTS,
   posOnRoute,
@@ -18,6 +19,11 @@ export default function CargoLiveMap({
   highlightId,
   compact,
 }: Props) {
+  const h = compact ? 300 : 420
+
+  let markers: MapMarker[] = []
+  let routes: MapRoute[] = []
+
   try {
     const base: MapMarker[] = [
       { id: 'goa', lat: 15.4, lng: 73.8, label: 'Goa Warehouse / Port', kind: 'port', color: '#a78bfa' },
@@ -26,9 +32,7 @@ export default function CargoLiveMap({
       { id: 'camp-a', lat: -70.55, lng: 11.9, label: 'Field Camp A', kind: 'camp', color: '#f59e0b' },
       { id: 'camp-b', lat: -70.82, lng: 11.45, label: 'Field Camp B', kind: 'camp', color: '#f59e0b' },
     ]
-
-    const active = (items || []).filter(c => c.status !== 'Pending')
-
+    const active = (items || CARGO_SHIPMENTS).filter(c => c && c.status !== 'Pending')
     const cargoMarkers: MapMarker[] = active.map(c => {
       const pos = posOnRoute(c.progress, c.destination)
       return {
@@ -37,13 +41,13 @@ export default function CargoLiveMap({
         lng: pos.lng,
         label: `${c.id} · ${c.name}`,
         sub: `${c.status} · ${c.progress}% → ${c.destination}`,
-        kind: 'cargo',
+        kind: 'cargo' as const,
         color: highlightId === c.id ? '#f472b6' : statusColor(c.status),
       }
     })
+    markers = [...base, ...cargoMarkers]
 
     const seen = new Set<string>()
-    const routes: MapRoute[] = []
     for (const c of active) {
       if (seen.has(c.destination)) continue
       seen.add(c.destination)
@@ -71,25 +75,17 @@ export default function CargoLiveMap({
         weight: 3,
       })
     }
-
-    const h = compact ? 300 : 420
-    return (
-      <div style={{ width: '100%', height: h, minHeight: h }}>
-        <PolarisMap
-          markers={[...base, ...cargoMarkers]}
-          routes={routes}
-          center={[-30, 50]}
-          zoom={3}
-          height={h}
-        />
-      </div>
-    )
   } catch (e) {
     console.error(e)
-    return (
-      <div style={{ height: compact ? 300 : 420, background: '#0a1628', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        Map unavailable
-      </div>
-    )
+    markers = []
+    routes = []
   }
+
+  return (
+    <MapErrorBoundary height={h}>
+      <div style={{ width: '100%', height: h, minHeight: h }}>
+        <PolarisMap markers={markers} routes={routes} center={[-30, 50]} zoom={3} height={h} />
+      </div>
+    </MapErrorBoundary>
+  )
 }
