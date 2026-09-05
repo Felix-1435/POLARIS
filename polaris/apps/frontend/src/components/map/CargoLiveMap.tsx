@@ -14,7 +14,6 @@ type Props = {
   compact?: boolean
 }
 
-/** Approximate lat/lng along India → Antarctica sealift by progress 0–100 */
 function posOnRoute(progress: number, dest: string): { lat: number; lng: number } {
   const p = Math.max(0, Math.min(100, progress)) / 100
   const goa = { lat: 15.4, lng: 73.8 }
@@ -63,13 +62,16 @@ export default function CargoLiveMap({ items = DEFAULT, highlightId, compact }: 
     }
   })
 
+  const h = compact ? 280 : 400
   return (
-    <PolarisMap
-      markers={[...base, ...cargoMarkers]}
-      center={[-25, 50]}
-      zoom={3}
-      height={compact ? 280 : 400}
-      className={compact ? 'min-h-[280px]' : 'min-h-[360px] md:min-h-[400px]'}
-    />
+    <div className={`w-full ${compact ? 'h-[280px]' : 'h-[360px] md:h-[400px]'}`}>
+      <PolarisMap
+        markers={[...base, ...cargoMarkers]}
+        center={[-25, 50]}
+        zoom={3}
+        height={h}
+        className="w-full h-full"
+      />
+    </div>
   )
 }

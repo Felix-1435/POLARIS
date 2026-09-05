@@ -52,6 +52,12 @@ function loadLeaflet(): Promise<any> {
       link.href = LEAFLET_CSS
       document.head.appendChild(link)
     }
+    if (!document.getElementById('polaris-leaflet-fix')) {
+      const style = document.createElement('style')
+      style.id = 'polaris-leaflet-fix'
+      style.textContent = '.leaflet-container{width:100%!important;height:100%!important;background:#0a1628}.leaflet-tile{max-width:none!important;max-height:none!important}.leaflet-container img.leaflet-tile{max-width:none!important}'
+      document.head.appendChild(style)
+    }
     const existing = document.querySelector(`script[src="${LEAFLET_JS}"]`)
     if (existing) {
       existing.addEventListener('load', () => resolve(window.L))
@@ -68,17 +74,13 @@ function loadLeaflet(): Promise<any> {
 
 /** Leaflet tile layer that prefers IndexedDB cache, falls back to network and caches. */
 function createOfflineTileLayer(L: any) {
-  return L.GridLayer.extend({
+  return L.TileLayer.extend({
     createTile: function (coords: { x: number; y: number; z: number }, done: (err: any, tile: HTMLElement) => void) {
       const tile = document.createElement('img')
       tile.alt = ''
       tile.setAttribute('role', 'presentation')
-      tile.style.width = '100%'
-      tile.style.height = '100%'
-      // @ts-expect-error leaflet internal
-      const size = this.getTileSize()
-      tile.width = size.x
-      tile.height = size.y
+      // Fixed 256px — percentage width causes half-tile rendering bugs
+      tile.style.cssText = 'width:256px;height:256px;display:block;'
 
       const z = coords.z
       const x = coords.x
@@ -209,8 +211,10 @@ export default function OfflineTileMap({ emergencies = [], className, height = 4
         const OfflineLayer = createOfflineTileLayer(L)
         const layer = new OfflineLayer({
           attribution: TILE_ATTRIB,
-          maxZoom: 12,
+          maxZoom: 13,
           minZoom: 2,
+          tileSize: 256,
+          keepBuffer: 2,
         })
         layer.addTo(map)
 
@@ -241,6 +245,12 @@ export default function OfflineTileMap({ emergencies = [], className, height = 4
         })
 
         setReady(true)
+        ;[50, 200, 500, 1000, 2000].forEach(ms => {
+          setTimeout(() => { try { map.invalidateSize(true) } catch {} }, ms)
+        })
+        if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+          new ResizeObserver(() => { try { map.invalidateSize(true) } catch {} }).observe(containerRef.current)
+        }
       } catch (err) {
         console.error(err)
         toast.error('Map failed to load')
