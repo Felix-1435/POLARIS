@@ -4,6 +4,7 @@ import { ScanLine, ArrowRight, CloudLightning, Route, Wifi, WifiOff, RefreshCw }
 import { Link } from 'wouter'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import CargoLiveMap from '@/components/map/CargoLiveMap'
 import {
   loadShipments,
   getWeatherAdvisories,
@@ -187,27 +188,14 @@ export default function CargoDashboard() {
         </div>
       </div>
 
-      {/* Simple non-Leaflet pathway schematic — cannot crash */}
-      <div className="glass rounded-2xl border border-ice-800/50 p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-ice-100 text-sm">Corridor status (schematic)</h2>
+      <div className="glass rounded-2xl border border-ice-800/50 overflow-hidden">
+        <div className="px-5 py-3 border-b border-ice-800/50 flex items-center justify-between">
+          <h2 className="font-semibold text-ice-100 text-sm">Live cargo map</h2>
           <Link href="/cargo/tracking">
             <a className="text-xs text-cyan-400">Open tracking →</a>
           </Link>
         </div>
-        <div className="relative h-16 flex items-center px-2">
-          <div className="absolute left-4 right-4 h-1 bg-ice-800 rounded-full" />
-          <div className="absolute left-4 h-1 bg-cyan-500/60 rounded-full" style={{ width: '55%' }} />
-          {['Goa', 'Ocean', 'Polar', 'Station'].map((label, i) => (
-            <div key={label} className="relative z-10 flex-1 flex flex-col items-center">
-              <div className={cn('w-3 h-3 rounded-full border-2', i <= 2 ? 'bg-cyan-400 border-cyan-300' : 'bg-ice-700 border-ice-600')} />
-              <span className="text-[10px] text-ice-500 mt-2">{label}</span>
-            </div>
-          ))}
-        </div>
-        <p className="text-[11px] text-ice-600 mt-2">
-          Primary route (cyan). Alternate weather route is assigned from the AI weather plan above when conditions degrade.
-        </p>
+        <CargoLiveMap compact items={list} />
       </div>
     </div>
   )
