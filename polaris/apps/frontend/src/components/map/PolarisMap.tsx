@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 
 declare global {
   interface Window {
@@ -37,7 +37,6 @@ const LEAFLET_CSS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
 const LEAFLET_JS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 const ESRI =
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-const OSM = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 
 const DEFAULT_MARKERS: MapMarker[] = [
   { id: 'goa', lat: 15.4, lng: 73.8, label: 'Goa / Mormugao Port', kind: 'port', color: '#a78bfa' },
@@ -51,7 +50,7 @@ const DEFAULT_MARKERS: MapMarker[] = [
 function ensureLeaflet(): Promise<any> {
   return new Promise((resolve, reject) => {
     try {
-      if (typeof window === 'undefined') return reject(new Error('SSR'))
+      if (typeof window === 'undefined') return reject(new Error('no window'))
       if (window.L) return resolve(window.L)
 
       if (!document.querySelector('link[data-leaflet="css"]')) {
@@ -61,20 +60,10 @@ function ensureLeaflet(): Promise<any> {
         link.setAttribute('data-leaflet', 'css')
         document.head.appendChild(link)
       }
-      if (!document.getElementById('polaris-leaflet-fix')) {
-        const st = document.createElement('style')
-        st.id = 'polaris-leaflet-fix'
-        st.textContent =
-          '.leaflet-container{background:#0a1628;width:100%;height:100%}.leaflet-tile{max-width:none!important;max-height:none!important}'
-        document.head.appendChild(st)
-      }
 
       const existing = document.querySelector('script[data-leaflet="js"]') as HTMLScriptElement | null
       if (existing) {
-        const poll = () => {
-          if (window.L) resolve(window.L)
-          else setTimeout(poll, 30)
-        }
+        const poll = () => (window.L ? resolve(window.L) : setTimeout(poll, 30))
         existing.addEventListener('load', () => resolve(window.L))
         poll()
         return
@@ -110,6 +99,7 @@ export default function PolarisMap({
   height = 400,
   className = '',
 }: Props) {
+  const mountId = useId().replace(/:/g, '')
   const boxRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<any>(null)
   const layerRef = useRef<any>(null)
@@ -123,6 +113,7 @@ export default function PolarisMap({
     let dead = false
     let map: any = null
     const timers: number[] = []
+
     const onResize = () => {
       try {
         mapRef.current?.invalidateSize?.(true)
@@ -135,11 +126,15 @@ export default function PolarisMap({
         if (dead || !boxRef.current) return
 
         const el = boxRef.current
-        // Avoid "Map container is already initialized"
-        if ((el as any)._leaflet_id) {
-          el.innerHTML = ''
-          delete (el as any)._leaflet_id
-        }
+        // Always start clean — fixes blank page after navigating away and back
+        try {
+          if (mapRef.current) {
+            mapRef.current.remove()
+            mapRef.current = null
+          }
+        } catch { /* */ }
+        el.innerHTML = ''
+        delete (el as any)._leaflet_id
 
         map = L.map(el, {
           center,
@@ -153,22 +148,9 @@ export default function PolarisMap({
         L.tileLayer(ESRI, {
           attribution: 'Tiles &copy; Esri',
           maxZoom: 12,
-          errorTileUrl:
-            'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
         }).addTo(map)
 
-        // Silent OSM fallback if many tile errors
-        let errors = 0
-        map.on('tileerror', () => {
-          errors++
-          if (errors === 8) {
-            try {
-              L.tileLayer(OSM, { maxZoom: 12 }).addTo(map)
-            } catch { /* */ }
-          }
-        })
-
-        ;[100, 400, 1000].forEach(ms => {
+        ;[100, 400, 800].forEach(ms => {
           timers.push(window.setTimeout(onResize, ms) as unknown as number)
         })
         window.addEventListener('resize', onResize)
@@ -185,12 +167,22 @@ export default function PolarisMap({
       timers.forEach(clearTimeout)
       window.removeEventListener('resize', onResize)
       try {
-        mapRef.current?.remove?.()
+        if (mapRef.current) {
+          mapRef.current.off()
+          mapRef.current.remove()
+        }
       } catch { /* */ }
       mapRef.current = null
+      layerRef.current = null
+      if (boxRef.current) {
+        try {
+          boxRef.current.innerHTML = ''
+          delete (boxRef.current as any)._leaflet_id
+        } catch { /* */ }
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [mountId])
 
   useEffect(() => {
     const map = mapRef.current
@@ -199,7 +191,9 @@ export default function PolarisMap({
 
     try {
       if (layerRef.current) {
-        map.removeLayer(layerRef.current)
+        try {
+          map.removeLayer(layerRef.current)
+        } catch { /* */ }
         layerRef.current = null
       }
       const group = L.layerGroup()
@@ -217,7 +211,7 @@ export default function PolarisMap({
       })
 
       pins.forEach(m => {
-        if (m == null || Number.isNaN(m.lat) || Number.isNaN(m.lng)) return
+        if (m == null || Number.isNaN(+m.lat) || Number.isNaN(+m.lng)) return
         const color =
           m.color ||
           ({
@@ -231,18 +225,16 @@ export default function PolarisMap({
           '#22d3ee'
         try {
           L.marker([m.lat, m.lng], { icon: pinIcon(L, color) })
-            .bindPopup(
-              `<strong>${m.label || m.id}</strong>${
-                m.sub ? `<br/>${m.sub}` : ''
-              }`
-            )
+            .bindPopup(`<strong>${m.label || m.id}</strong>${m.sub ? `<br/>${m.sub}` : ''}`)
             .addTo(group)
         } catch { /* */ }
       })
 
       group.addTo(map)
       layerRef.current = group
-      map.invalidateSize?.(true)
+      try {
+        map.invalidateSize(true)
+      } catch { /* */ }
     } catch (e) {
       console.error('overlay', e)
     }
@@ -255,24 +247,21 @@ export default function PolarisMap({
         style={{
           width: '100%',
           height: h,
-          minHeight: h,
           background: '#0a1628',
-          color: '#94a3b8',
+          color: '#64748b',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 13,
-          textAlign: 'center',
-          padding: 12,
+          fontSize: 12,
         }}
       >
-        Map unavailable ({err})
+        Map unavailable
       </div>
     )
   }
 
   return (
-    <div className={className} style={{ width: '100%', height: h, minHeight: h, background: '#0a1628', position: 'relative' }}>
+    <div className={className} style={{ width: '100%', height: h, minHeight: h, background: '#0a1628' }}>
       <div ref={boxRef} style={{ width: '100%', height: '100%' }} />
     </div>
   )

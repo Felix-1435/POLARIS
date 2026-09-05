@@ -1,13 +1,10 @@
 import { motion } from 'framer-motion'
-import { Package, ScanLine, ArrowRight } from 'lucide-react'
-import { Link } from 'wouter'
+import { ScanLine, ArrowRight } from 'lucide-react'
+import { Link, useLocation } from 'wouter'
 import { cn } from '@/lib/utils'
 import CargoLiveMap from '@/components/map/CargoLiveMap'
+import MapErrorBoundary from '@/components/map/MapErrorBoundary'
 import { CARGO_SHIPMENTS } from '@/lib/cargoShipments'
-
-const stats = [
-  { label: 'Total Cargo', value: '248', icon: Package },
-]
 
 const recent = CARGO_SHIPMENTS.map(c => ({
   id: c.id,
@@ -18,6 +15,8 @@ const recent = CARGO_SHIPMENTS.map(c => ({
 }))
 
 export default function CargoDashboard() {
+  const [loc] = useLocation()
+
   return (
     <div className="space-y-6 max-w-[1200px] mx-auto">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -78,7 +77,7 @@ export default function CargoDashboard() {
               key={r.id}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 + i * 0.04 }}
+              transition={{ delay: 0.25 + i * 0.03 }}
               className="px-5 py-3 flex items-center gap-4 hover:bg-ice-900/30 transition-colors"
             >
               <span className="font-mono text-sm text-cyan-400 w-20">{r.id}</span>
@@ -96,12 +95,7 @@ export default function CargoDashboard() {
                 {r.status}
               </span>
               <div className="w-20 h-1.5 bg-ice-800 rounded-full overflow-hidden hidden md:block">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${r.progress}%` }}
-                  transition={{ delay: 0.5 + i * 0.05, duration: 0.6 }}
-                  className="h-full bg-gradient-to-r from-cyan-500 to-blue-400 rounded-full"
-                />
+                <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-400 rounded-full" style={{ width: `${r.progress}%` }} />
               </div>
             </motion.div>
           ))}
@@ -122,7 +116,10 @@ export default function CargoDashboard() {
             </a>
           </Link>
         </div>
-        <CargoLiveMap compact />
+        {/* key forces fresh map after returning from /cargo/scan */}
+        <MapErrorBoundary height={300} key={loc}>
+          <CargoLiveMap compact key={`map-${loc}`} />
+        </MapErrorBoundary>
       </motion.div>
     </div>
   )
