@@ -1,44 +1,97 @@
-/* ===== LIGHT THEME OVERRIDES ===== */
+/* ===== LIGHT THEME — polished & readable ===== */
+html.light {
+  color-scheme: light;
+}
+
 html.light body {
-  background: #f1f5f9;
+  background: linear-gradient(160deg, #f0f9ff 0%, #f8fafc 40%, #f1f5f9 100%);
   color: #0f172a;
 }
 
+/* Glass cards */
 html.light .glass {
-  background: rgba(255, 255, 255, 0.85);
-  border-color: rgba(148, 163, 184, 0.25);
-  backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(14, 165, 233, 0.12);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(14, 165, 233, 0.04);
+  backdrop-filter: blur(12px);
 }
 
 html.light .glass-strong {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid rgba(14, 165, 233, 0.15);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 }
 
-html.light .text-ice-50 { color: #0f172a; }
-html.light .text-ice-100 { color: #1e293b; }
-html.light .text-ice-200 { color: #334155; }
-html.light .text-ice-300 { color: #475569; }
-html.light .text-ice-400 { color: #64748b; }
+/* Text hierarchy — high contrast */
+html.light .text-ice-50  { color: #0c4a6e; }
+html.light .text-ice-100 { color: #0f172a; }
+html.light .text-ice-200 { color: #1e293b; }
+html.light .text-ice-300 { color: #334155; }
+html.light .text-ice-400 { color: #475569; }
 html.light .text-ice-500 { color: #64748b; }
 html.light .text-ice-600 { color: #94a3b8; }
 
+/* Surfaces */
+html.light .bg-ice-950 { background-color: #f0f9ff; }
+html.light .bg-ice-900 { background-color: #f8fafc; }
+html.light .bg-ice-800 { background-color: #e2e8f0; }
 html.light .bg-ice-900\/50,
 html.light .bg-ice-900\/40,
-html.light .bg-ice-900\/70 { background-color: rgba(241, 245, 249, 0.9); }
-html.light .bg-ice-800\/50 { background-color: rgba(226, 232, 240, 0.6); }
+html.light .bg-ice-900\/70 {
+  background-color: rgba(241, 245, 249, 0.95);
+}
+html.light .bg-ice-800\/50 {
+  background-color: rgba(226, 232, 240, 0.7);
+}
+
+/* Borders */
 html.light .border-ice-800,
 html.light .border-ice-800\/50,
-html.light .border-ice-700 { border-color: rgba(203, 213, 225, 0.8); }
+html.light .border-ice-700,
+html.light .border-ice-700\/50 {
+  border-color: rgba(186, 230, 253, 0.8);
+}
 
-html.light .bg-ice-950 { background-color: #f8fafc; }
-html.light .bg-ice-900 { background-color: #f1f5f9; }
-html.light .bg-ice-800 { background-color: #e2e8f0; }
-
-/* Keep accent colors visible in light mode */
+/* Accents stay vivid */
 html.light .text-cyan-300,
 html.light .text-cyan-400 { color: #0891b2; }
 html.light .text-emerald-400 { color: #059669; }
 html.light .text-amber-400 { color: #d97706; }
 html.light .text-red-400 { color: #dc2626; }
 html.light .text-blue-400 { color: #2563eb; }
+html.light .text-purple-400 { color: #7c3aed; }
+
+/* Sidebar in light mode */
+html.light aside.glass-strong,
+html.light .glass-strong.border-r {
+  background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%);
+  border-color: rgba(14, 165, 233, 0.15);
+}
+
+/* Inputs */
+html.light input,
+html.light select,
+html.light textarea {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+html.light input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Tables / rows */
+html.light tr:hover {
+  background-color: rgba(224, 242, 254, 0.5);
+}
+
+/* Chat bubbles in AI */
+html.light .ai-bubble-bot {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #0c4a6e;
+}
+html.light .ai-bubble-user {
+  background: linear-gradient(135deg, #0891b2, #2563eb);
+  color: white;
+}
