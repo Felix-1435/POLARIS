@@ -9,7 +9,7 @@ import {
   getCachedTile,
   putTile,
   tileUrl,
-  TILE_SUBDOMAINS,
+  tileUrlEsri,
   TILE_ATTRIB,
   type PackProgress,
   type StationPack,
@@ -101,17 +101,28 @@ function createOfflineTileLayer(L: any) {
             return
           }
 
-          // Network fetch + cache
+          // Network fetch + cache (OSM, then Esri — no API key)
           if (!navigator.onLine) {
             tile.style.background = '#0f172a'
             done(null, tile)
             return
           }
-          const s = TILE_SUBDOMAINS[(x + y) % TILE_SUBDOMAINS.length]
-          const url = tileUrl(z, x, y, s)
-          const res = await fetch(url, { mode: 'cors' })
-          if (!res.ok) throw new Error('tile fetch failed')
-          const blob = await res.blob()
+          let blob: Blob | null = null
+          for (const url of [tileUrl(z, x, y), tileUrlEsri(z, x, y)]) {
+            try {
+              const res = await fetch(url, { mode: 'cors', headers: { Accept: 'image/png,image/*' } })
+              if (!res.ok) continue
+              const b = await res.blob()
+              if (b.size < 500) continue
+              blob = b
+              break
+            } catch { /* try next */ }
+          }
+          if (!blob) {
+            tile.style.background = '#0f172a'
+            done(null, tile)
+            return
+          }
           await putTile(key, blob).catch(() => {})
           const obj = URL.createObjectURL(blob)
           tile.onload = () => {

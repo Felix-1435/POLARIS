@@ -92,33 +92,51 @@ export function latLngToTile(lat: number, lng: number, z: number): { x: number; 
   return { x: Math.max(0, Math.min(n - 1, x)), y: Math.max(0, Math.min(n - 1, y)) }
 }
 
-/** Default tile URL template (Carto dark — good for polar UI). {s} subdomain optional. */
-export const TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
-export const TILE_SUBDOMAINS = ['a', 'b', 'c', 'd']
-export const TILE_ATTRIB = '&copy; OpenStreetMap &copy; CARTO'
+/**
+ * Free tile sources — NO API key required.
+ * Primary: OpenStreetMap
+ * Fallback imagery: Esri World Imagery (better for polar coastlines)
+ */
+export const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+export const TILE_URL_ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+export const TILE_SUBDOMAINS = ['a'] // OSM single host; be polite with rate
+export const TILE_ATTRIB = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 
-export function tileUrl(z: number, x: number, y: number, s = 'a'): string {
+export function tileUrl(z: number, x: number, y: number, _s = 'a'): string {
+  // Standard OSM — no API key
   return TILE_URL
-    .replace('{s}', s)
     .replace('{z}', String(z))
     .replace('{x}', String(x))
     .replace('{y}', String(y))
+}
+
+export function tileUrlEsri(z: number, x: number, y: number): string {
+  // Esri uses z/y/x order
+  return TILE_URL_ESRI
+    .replace('{z}', String(z))
+    .replace('{y}', String(y))
+    .replace('{x}', String(x))
 }
 
 async function fetchAndCache(z: number, x: number, y: number): Promise<boolean> {
   const key = `${z}/${x}/${y}`
   const existing = await getCachedTile(key)
   if (existing) return true
-  try {
-    const s = TILE_SUBDOMAINS[(x + y) % TILE_SUBDOMAINS.length]
-    const res = await fetch(tileUrl(z, x, y, s), { mode: 'cors' })
-    if (!res.ok) return false
-    const blob = await res.blob()
-    await putTile(key, blob)
-    return true
-  } catch {
-    return false
+  const urls = [tileUrl(z, x, y), tileUrlEsri(z, x, y)]
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { mode: 'cors', headers: { Accept: 'image/png,image/*' } })
+      if (!res.ok) continue
+      const blob = await res.blob()
+      // Skip tiny error tiles / HTML error pages
+      if (blob.size < 500) continue
+      await putTile(key, blob)
+      return true
+    } catch {
+      continue
+    }
   }
+  return false
 }
 
 export type StationPack = {
