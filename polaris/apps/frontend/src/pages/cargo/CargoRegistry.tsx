@@ -1,22 +1,15 @@
-import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Ship, Plane, Package } from 'lucide-react'
+import { Package } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import PageHeader from '@/components/shared/PageHeader'
-import { loadShipments, type CargoShipment } from '@/lib/cargoShipments'
+import { CARGO_SHIPMENTS } from '@/lib/cargoShipments'
 
 export default function CargoRegistry() {
-  const [rows, setRows] = useState<CargoShipment[]>([])
-
-  useEffect(() => {
-    setRows(loadShipments())
-  }, [])
-
   return (
     <div className="space-y-6 max-w-[1200px] mx-auto">
       <PageHeader
         title="Cargo Registry"
-        subtitle="All consignments with sea / air transport mode"
+        subtitle="All consignments on the polar logistics pipeline"
         backTo="/cargo"
         backLabel="← Cargo & Logistics"
       />
@@ -32,15 +25,13 @@ export default function CargoRegistry() {
               <tr className="text-left text-ice-500 border-b border-ice-800/50 text-xs uppercase tracking-wide">
                 <th className="px-5 py-3 font-medium">ID</th>
                 <th className="px-5 py-3 font-medium">Item</th>
-                <th className="px-5 py-3 font-medium">Transport</th>
-                <th className="px-5 py-3 font-medium">Vessel / Flight</th>
                 <th className="px-5 py-3 font-medium">Destination</th>
                 <th className="px-5 py-3 font-medium">Status</th>
                 <th className="px-5 py-3 font-medium">Progress</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ice-800/40">
-              {rows.map(r => (
+              {CARGO_SHIPMENTS.map(r => (
                 <tr key={r.id} className="hover:bg-ice-900/30">
                   <td className="px-5 py-3 font-mono text-cyan-400">{r.id}</td>
                   <td className="px-5 py-3 text-ice-100">
@@ -49,20 +40,6 @@ export default function CargoRegistry() {
                       {r.name}
                     </span>
                   </td>
-                  <td className="px-5 py-3">
-                    <span
-                      className={cn(
-                        'text-[11px] px-2 py-0.5 rounded-full border inline-flex items-center gap-1 font-medium',
-                        r.transport === 'Air'
-                          ? 'bg-violet-500/15 text-violet-300 border-violet-500/30'
-                          : 'bg-sky-500/15 text-sky-300 border-sky-500/30'
-                      )}
-                    >
-                      {r.transport === 'Air' ? <Plane className="w-3 h-3" /> : <Ship className="w-3 h-3" />}
-                      {r.transport || 'Sea'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-ice-400 text-xs">{r.vesselOrFlight || '—'}</td>
                   <td className="px-5 py-3 text-ice-300">{r.destination}</td>
                   <td className="px-5 py-3">
                     <span
