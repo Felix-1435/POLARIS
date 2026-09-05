@@ -1,0 +1,44 @@
+/* ===== LIGHT THEME OVERRIDES ===== */
+html.light body {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+html.light .glass {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(148, 163, 184, 0.25);
+  backdrop-filter: blur(16px);
+}
+
+html.light .glass-strong {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+html.light .text-ice-50 { color: #0f172a; }
+html.light .text-ice-100 { color: #1e293b; }
+html.light .text-ice-200 { color: #334155; }
+html.light .text-ice-300 { color: #475569; }
+html.light .text-ice-400 { color: #64748b; }
+html.light .text-ice-500 { color: #64748b; }
+html.light .text-ice-600 { color: #94a3b8; }
+
+html.light .bg-ice-900\/50,
+html.light .bg-ice-900\/40,
+html.light .bg-ice-900\/70 { background-color: rgba(241, 245, 249, 0.9); }
+html.light .bg-ice-800\/50 { background-color: rgba(226, 232, 240, 0.6); }
+html.light .border-ice-800,
+html.light .border-ice-800\/50,
+html.light .border-ice-700 { border-color: rgba(203, 213, 225, 0.8); }
+
+html.light .bg-ice-950 { background-color: #f8fafc; }
+html.light .bg-ice-900 { background-color: #f1f5f9; }
+html.light .bg-ice-800 { background-color: #e2e8f0; }
+
+/* Keep accent colors visible in light mode */
+html.light .text-cyan-300,
+html.light .text-cyan-400 { color: #0891b2; }
+html.light .text-emerald-400 { color: #059669; }
+html.light .text-amber-400 { color: #d97706; }
+html.light .text-red-400 { color: #dc2626; }
+html.light .text-blue-400 { color: #2563eb; }
