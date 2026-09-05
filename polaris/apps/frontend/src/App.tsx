@@ -17,63 +17,83 @@ import EmergencyDashboard from './pages/emergency/EmergencyDashboard'
 import AICommander from './pages/AICommander'
 import Admin from './pages/Admin'
 
-// ---------- Auth Context ----------
+// ---------- Auth (sessionStorage = clears when tab/window closes) ----------
 type User = { name: string; role: string; email: string }
 type AuthCtx = { user: User | null; login: (u: User) => void; logout: () => void }
 const AuthContext = createContext<AuthCtx>({ user: null, login: () => {}, logout: () => {} })
 export const useAuth = () => useContext(AuthContext)
 
-// ---------- Theme Context ----------
+// ---------- Theme ----------
 type ThemeCtx = { theme: 'dark' | 'light'; toggle: () => void }
 const ThemeContext = createContext<ThemeCtx>({ theme: 'dark', toggle: () => {} })
 export const useTheme = () => useContext(ThemeContext)
 
-function Protected({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth()
-  if (!user) return <Redirect to="/login" />
-  return <>{children}</>
+const AUTH_KEY = 'polaris_session_user'
+const THEME_KEY = 'polaris_theme'
+
+function readSessionUser(): User | null {
+  try {
+    const s = sessionStorage.getItem(AUTH_KEY)
+    return s ? JSON.parse(s) : null
+  } catch {
+    return null
+  }
 }
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(() => {
-    try {
-      const s = localStorage.getItem('polaris_user')
-      return s ? JSON.parse(s) : null
-    } catch { return null }
-  })
+  // Always start from sessionStorage (empty on new tab / after close)
+  const [user, setUser] = useState<User | null>(() => readSessionUser())
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    return (localStorage.getItem('polaris_theme') as 'dark' | 'light') || 'dark'
+    return (localStorage.getItem(THEME_KEY) as 'dark' | 'light') || 'dark'
   })
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [location] = useLocation()
+  const [location, setLocation] = useLocation()
+
+  // Clear any OLD localStorage auth leftover from previous versions
+  useEffect(() => {
+    localStorage.removeItem('polaris_user')
+  }, [])
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
     document.documentElement.classList.toggle('light', theme === 'light')
-    localStorage.setItem('polaris_theme', theme)
+    localStorage.setItem(THEME_KEY, theme)
   }, [theme])
 
-  const login = (u: User) => {
-    localStorage.setItem('polaris_user', JSON.stringify(u))
-    setUser(u)
-  }
-  const logout = () => {
-    localStorage.removeItem('polaris_user')
-    setUser(null)
-  }
-  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark')
+  // If not logged in and not already on a public path, force login view
+  useEffect(() => {
+    if (!user && location !== '/login') {
+      // stay on login UI (we render LoginPage below)
+    }
+  }, [user, location])
 
-  // Always force login page if not authenticated
+  const login = (u: User) => {
+    sessionStorage.setItem(AUTH_KEY, JSON.stringify(u))
+    setUser(u)
+    setLocation('/')
+  }
+
+  const logout = () => {
+    sessionStorage.removeItem(AUTH_KEY)
+    localStorage.removeItem('polaris_user') // cleanup legacy
+    setUser(null)
+    setLocation('/login')
+  }
+
+  const toggleTheme = () => setTheme(t => (t === 'dark' ? 'light' : 'dark'))
+
+  // ========== NOT LOGGED IN → ALWAYS SHOW LOGIN ==========
   if (!user) {
     return (
       <ThemeContext.Provider value={{ theme, toggle: toggleTheme }}>
-        <AuthContext.Provider value={{ user, login, logout }}>
+        <AuthContext.Provider value={{ user: null, login, logout }}>
           <LoginPage />
         </AuthContext.Provider>
       </ThemeContext.Provider>
     )
   }
 
+  // ========== LOGGED IN → APP SHELL ==========
   return (
     <ThemeContext.Provider value={{ theme, toggle: toggleTheme }}>
       <AuthContext.Provider value={{ user, login, logout }}>
