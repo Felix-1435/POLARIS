@@ -1,3 +1,5 @@
+@import './theme-additions.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -150,4 +152,3 @@ body {
 .font-mono {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
-@import './theme-additions.css';
