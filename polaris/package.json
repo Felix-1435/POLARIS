@@ -1,0 +1,10 @@
+{
+  "name": "polaris",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @polaris/frontend run dev",
+    "build": "pnpm --filter @polaris/frontend run build",
+    "dev:api": "pnpm --filter @polaris/api run dev"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
