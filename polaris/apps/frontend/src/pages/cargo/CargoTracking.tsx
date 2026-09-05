@@ -1,45 +1,101 @@
-import { Ship, MapPin, Package } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Ship, MapPin, Package, Radio } from 'lucide-react'
+import CargoLiveMap from '@/components/map/CargoLiveMap'
+
+const focus = {
+  id: 'ANT-001',
+  item: 'Satellite Communication Equipment',
+  location: 'MV Sagar Kanya · Southern Ocean',
+  status: 'IN TRANSIT',
+  progress: 72,
+  eta: '15 Dec 2026',
+  condition: 'GOOD',
+}
+
 export default function CargoTracking() {
   return (
-    <div className="space-y-6 max-w-[1000px] mx-auto">
-      <h1 className="text-2xl font-bold text-ice-50">Live Cargo Tracking</h1>
-      <div className="glass rounded-xl border border-ice-800/50 p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <Package className="w-8 h-8 text-cyan-400" />
-          <div>
-            <h2 className="font-bold text-lg text-ice-50 font-mono">ANT-001</h2>
-            <p className="text-sm text-ice-400">Satellite Communication Equipment</p>
+    <div className="space-y-6 max-w-[1200px] mx-auto">
+      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
+        <h1 className="text-2xl font-bold text-ice-50 tracking-tight">Live Cargo Tracking</h1>
+        <p className="text-ice-500 text-sm">Real-time positions on the India → Antarctica sealift corridor</p>
+      </motion.div>
+
+      {/* Focus card */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass rounded-2xl border border-cyan-500/25 overflow-hidden"
+      >
+        <div className="px-5 py-4 border-b border-ice-800/50 flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-cyan-500/10 to-transparent">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+              <Package className="w-5 h-5 text-cyan-400" />
+            </div>
+            <div>
+              <h2 className="font-bold text-ice-50 font-mono">{focus.id}</h2>
+              <p className="text-sm text-ice-400">{focus.item}</p>
+            </div>
+          </div>
+          <span className="text-xs px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/25 font-medium flex items-center gap-1.5">
+            <Radio className="w-3 h-3 animate-pulse" /> {focus.status}
+          </span>
+        </div>
+
+        <div className="grid sm:grid-cols-4 gap-3 p-4 text-sm border-b border-ice-800/40">
+          <div className="bg-ice-900/40 rounded-xl p-3 border border-ice-800/50">
+            <p className="text-ice-500 text-[10px] uppercase tracking-wide">Current location</p>
+            <p className="text-ice-100 font-medium mt-0.5 flex items-center gap-1"><Ship className="w-3.5 h-3.5 text-cyan-400" /> {focus.location}</p>
+          </div>
+          <div className="bg-ice-900/40 rounded-xl p-3 border border-ice-800/50">
+            <p className="text-ice-500 text-[10px] uppercase tracking-wide">Progress</p>
+            <p className="text-cyan-300 font-bold mt-0.5 text-lg">{focus.progress}%</p>
+          </div>
+          <div className="bg-ice-900/40 rounded-xl p-3 border border-ice-800/50">
+            <p className="text-ice-500 text-[10px] uppercase tracking-wide">ETA</p>
+            <p className="text-ice-100 font-medium mt-0.5">{focus.eta}</p>
+          </div>
+          <div className="bg-ice-900/40 rounded-xl p-3 border border-ice-800/50">
+            <p className="text-ice-500 text-[10px] uppercase tracking-wide">Condition</p>
+            <p className="text-emerald-400 font-medium mt-0.5">{focus.condition}</p>
           </div>
         </div>
-        <div className="relative py-8">
-          <div className="absolute top-1/2 left-0 right-0 h-1 bg-ice-800 -translate-y-1/2" />
-          <div className="absolute top-1/2 left-0 h-1 bg-gradient-to-r from-cyan-500 to-blue-400 -translate-y-1/2" style={{ width: '80%' }} />
-          <div className="relative flex justify-between">
+
+        {/* Route steps */}
+        <div className="px-5 py-4">
+          <div className="relative flex justify-between min-w-0">
+            <div className="absolute top-4 left-0 right-0 h-0.5 bg-ice-800" />
+            <div className="absolute top-4 left-0 h-0.5 bg-gradient-to-r from-cyan-500 to-blue-400" style={{ width: '72%' }} />
             {['India Warehouse', 'Port', 'Ship', 'Antarctica', 'Maitri'].map((s, i) => (
-              <div key={s} className="flex flex-col items-center">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 z-10 ${i < 4 ? 'bg-cyan-500 border-cyan-400 text-white' : 'bg-ice-900 border-ice-600 text-ice-500'}`}>
-                  {i === 2 ? <Ship className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+              <div key={s} className="relative flex flex-col items-center z-[1] flex-1">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 text-[10px] ${
+                  i < 3 ? 'bg-cyan-500 border-cyan-400 text-white' : i === 3 ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300' : 'bg-ice-900 border-ice-600 text-ice-500'
+                }`}>
+                  {i === 2 ? <Ship className="w-3.5 h-3.5" /> : <MapPin className="w-3.5 h-3.5" />}
                 </div>
-                <p className="text-[10px] mt-2 text-ice-400 text-center w-16">{s}</p>
+                <p className="text-[10px] mt-1.5 text-ice-500 text-center leading-tight px-0.5">{s}</p>
               </div>
             ))}
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-4 mt-4 text-sm">
-          <div className="bg-ice-900/50 rounded-lg p-3">
-            <p className="text-ice-500 text-xs">Current Location</p>
-            <p className="text-ice-100 font-medium">MV Sagar Kanya</p>
-          </div>
-          <div className="bg-ice-900/50 rounded-lg p-3">
-            <p className="text-ice-500 text-xs">Progress</p>
-            <p className="text-cyan-300 font-medium">80%</p>
-          </div>
-          <div className="bg-ice-900/50 rounded-lg p-3">
-            <p className="text-ice-500 text-xs">ETA</p>
-            <p className="text-ice-100 font-medium">15 Dec 2026</p>
-          </div>
+      </motion.div>
+
+      {/* Live map */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="glass rounded-2xl border border-ice-800/50 overflow-hidden"
+      >
+        <div className="px-5 py-3 border-b border-ice-800/50 flex items-center justify-between">
+          <h2 className="font-semibold text-ice-100 text-sm flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-cyan-400" /> Live cargo map
+          </h2>
+          <span className="text-[10px] text-emerald-400 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Tracking active
+          </span>
         </div>
-      </div>
+        <CargoLiveMap highlightId="ANT-001" />
+      </motion.div>
     </div>
   )
 }

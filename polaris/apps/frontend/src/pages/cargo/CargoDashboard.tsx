@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { Package, CheckCircle, Clock, AlertTriangle, Ship, ArrowRight } from 'lucide-react'
 import { Link } from 'wouter'
 import { cn } from '@/lib/utils'
+import CargoLiveMap from '@/components/map/CargoLiveMap'
 
 const stats = [
   { label: 'Total Cargo', value: '248', icon: Package },
@@ -84,6 +85,22 @@ export default function CargoDashboard() {
             </motion.div>
           ))}
         </div>
+      </motion.div>
+
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35 }}
+        className="glass rounded-2xl border border-ice-800/50 overflow-hidden"
+      >
+        <div className="px-5 py-3 border-b border-ice-800/50 flex items-center justify-between">
+          <h2 className="font-semibold text-ice-100 text-sm">Live cargo positions</h2>
+          <Link href="/cargo/tracking">
+            <a className="text-xs text-cyan-400 flex items-center gap-1">Open tracking <ArrowRight className="w-3 h-3" /></a>
+          </Link>
+        </div>
+        <CargoLiveMap compact />
       </motion.div>
     </div>
   )
