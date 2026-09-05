@@ -13,6 +13,7 @@ import {
   OFFLINE_PROCEDURES, OFFLINE_CONTACTS, type EmergencyRecord,
 } from '@/lib/offlineEmergencies'
 import OfflineTileMap from '@/components/map/OfflineTileMap'
+import PolarisMap, { type MapMarker } from '@/components/map/PolarisMap'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -331,7 +332,7 @@ export default function EmergencyDashboard() {
         </div>
       )}
 
-      {/* OFFLINE MAP — full tiles via IndexedDB cache */}
+      {/* OFFLINE MAP */}
       {tab === 'map' && (
         <div className="glass rounded-xl border border-ice-800/50 p-5 space-y-4">
           <div className="flex items-center gap-2">
@@ -339,20 +340,42 @@ export default function EmergencyDashboard() {
             <h3 className="font-semibold text-ice-100">Offline map (tile cache)</h3>
           </div>
           <p className="text-xs text-ice-500">
-            Download the offline pack once while online. Tiles are stored in IndexedDB on this device.
-            When offline, the map serves cached tiles only — stations and SOS pins still show.
+            Satellite map of polar stations. Download offline pack while online so tiles work without internet.
           </p>
-          <OfflineTileMap
-            height={440}
-            emergencies={localList
-              .filter(e => e.lat != null && e.lng != null)
-              .map(e => ({
-                id: e.id,
-                lat: e.lat as number,
-                lng: e.lng as number,
-                label: `${e.type} · ${e.location}`,
-                type: e.type,
-              }))}
+          <div style={{ width: '100%', height: 440, minHeight: 440 }} className="rounded-xl overflow-hidden border border-ice-800/40">
+            <PolarisMap
+              height={440}
+              center={[-65, 40]}
+              zoom={3}
+              markers={[
+                { id: 'maitri', lat: -70.767, lng: 11.733, label: 'Maitri Research Station', kind: 'station', color: '#10b981' },
+                { id: 'bharati', lat: -69.407, lng: 76.187, label: 'Bharati Research Station', kind: 'station', color: '#10b981' },
+                { id: 'camp-a', lat: -70.55, lng: 11.9, label: 'Field Camp A', kind: 'camp', color: '#f59e0b' },
+                { id: 'camp-b', lat: -70.82, lng: 11.45, label: 'Field Camp B', kind: 'camp', color: '#f59e0b' },
+                { id: 'ship', lat: -60, lng: 40, label: 'MV Sagar Kanya', kind: 'vessel', color: '#38bdf8' },
+                ...localList
+                  .filter(e => e.lat != null && e.lng != null)
+                  .map(e => ({
+                    id: e.id,
+                    lat: e.lat as number,
+                    lng: e.lng as number,
+                    label: `${e.id} · ${e.type}`,
+                    sub: e.location,
+                    kind: 'emergency' as const,
+                    color: '#ef4444',
+                  })),
+              ]}
+            />
+          </div>
+          <OfflineTileMap height={360} emergencies={localList
+            .filter(e => e.lat != null && e.lng != null)
+            .map(e => ({
+              id: e.id,
+              lat: e.lat as number,
+              lng: e.lng as number,
+              label: `${e.type} · ${e.location}`,
+              type: e.type,
+            }))}
           />
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {STATIONS.map(s => (

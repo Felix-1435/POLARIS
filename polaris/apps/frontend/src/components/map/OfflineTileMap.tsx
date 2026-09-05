@@ -370,7 +370,12 @@ export default function OfflineTileMap({ emergencies = [], className, height = 4
       <div
         ref={containerRef}
         className="w-full rounded-xl overflow-hidden border border-ice-800/50 bg-ice-950"
-        style={{ height }}
+        style={{
+          height: typeof height === 'number' ? Math.max(height, 320) : height,
+          minHeight: 320,
+          width: '100%',
+          display: height === 1 ? 'none' : undefined,
+        }}
       />
 
       <p className="text-[11px] text-ice-500">

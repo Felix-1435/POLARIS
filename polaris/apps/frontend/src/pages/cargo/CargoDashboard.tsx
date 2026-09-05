@@ -3,6 +3,7 @@ import { Package, CheckCircle, Clock, AlertTriangle, Ship, ArrowRight } from 'lu
 import { Link } from 'wouter'
 import { cn } from '@/lib/utils'
 import CargoLiveMap from '@/components/map/CargoLiveMap'
+import { CARGO_SHIPMENTS } from '@/lib/cargoShipments'
 
 const stats = [
   { label: 'Total Cargo', value: '248', icon: Package },
@@ -12,13 +13,7 @@ const stats = [
   { label: 'Pending', value: '40', icon: Clock },
 ]
 
-const recent = [
-  { id: 'ANT-001', item: 'Satellite Equipment', dest: 'Maitri', status: 'In Transit', progress: 80 },
-  { id: 'ANT-002', item: 'Diesel Fuel (20kL)', dest: 'Maitri', status: 'Delayed', progress: 45 },
-  { id: 'ANT-003', item: 'Food Rations', dest: 'Bharati', status: 'Delivered', progress: 100 },
-  { id: 'ANT-004', item: 'Medical Kits', dest: 'Field Camp B', status: 'Pending', progress: 10 },
-  { id: 'ANT-015', item: 'Aviation Fuel', dest: 'Maitri', status: 'Delayed', progress: 35 },
-]
+const recent = CARGO_SHIPMENTS.map(c => ({ id: c.id, item: c.name, dest: c.destination, status: c.status, progress: c.progress }))
 
 export default function CargoDashboard() {
   return (
