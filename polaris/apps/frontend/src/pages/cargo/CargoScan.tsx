@@ -38,17 +38,16 @@ export default function CargoScan() {
   const [scanning, setScanning] = useState(false)
   const [scanSuccess, setScanSuccess] = useState(false)
   const [officerName, setOfficerName] = useState('')
-  const [isOnline, setIsOnline] = useState(navigator.onLine)
+  const [isOnline, setIsOnline] = useState(() => typeof navigator !== 'undefined' && navigator.onLine)
   const [showQR, setShowQR] = useState(false)
 
   // Detect cargo id from URL (?id=ANT-001) — for QR scan on phone
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const idFromUrl = params.get('id')
-    if (idFromUrl) {
-      setSelectedCargoId(idFromUrl)
-      loadSingleCargo(idFromUrl)
-    }
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const idFromUrl = params.get('id')
+      if (idFromUrl) setSelectedCargoId(idFromUrl)
+    } catch { /* ignore */ }
   }, [])
 
   useEffect(() => {
@@ -126,7 +125,10 @@ export default function CargoScan() {
         if (res.ok) {
           const data = await res.json()
           // history may come as string from JSONB
-          if (typeof data.history === 'string') data.history = JSON.parse(data.history)
+          if (typeof data.history === 'string') {
+            try { data.history = JSON.parse(data.history) } catch { data.history = [] }
+          }
+          if (!Array.isArray(data.history)) data.history = []
           setCargo(data)
           localStorage.setItem(`polaris_cargo_${id}`, JSON.stringify(data))
           return
@@ -170,10 +172,11 @@ export default function CargoScan() {
     }
     const expected = selectedRole.checkpoint
     if (cargo.current_checkpoint !== expected) {
+      const curName = CHECKPOINTS[cargo.current_checkpoint]?.name || 'Unknown'
       if (cargo.current_checkpoint > expected) {
-        toast.error(`Already completed. Cargo is at: ${CHECKPOINTS[cargo.current_checkpoint]?.name}`)
+        toast.error(`Already completed. Cargo is at: ${curName}`)
       } else {
-        toast.error(`Cargo not yet at your location. Current: ${CHECKPOINTS[cargo.current_checkpoint]?.name}`)
+        toast.error(`Cargo not yet at your location. Current: ${curName}`)
       }
       return
     }
@@ -331,6 +334,9 @@ export default function CargoScan() {
                   {/* Simple QR using external API for reliability */}
                   <img
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(qrValue)}`}
+                    alt="Cargo QR"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                    referrerPolicy="no-referrer"
                     alt="Cargo QR"
                     width={160}
                     height={160}

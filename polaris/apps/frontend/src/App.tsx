@@ -114,10 +114,10 @@ export default function App() {
                     <Route path="/" component={Dashboard} />
                     <Route path="/expeditions" component={Expeditions} />
                     <Route path="/expeditions/:id" component={ExpeditionDetail} />
-                    <Route path="/cargo" component={CargoDashboard} />
+                    <Route path="/cargo/scan" component={CargoScan} />
                     <Route path="/cargo/registry" component={CargoRegistry} />
                     <Route path="/cargo/tracking" component={CargoTracking} />
-                    <Route path="/cargo/scan" component={CargoScan} />
+                    <Route path="/cargo" component={CargoDashboard} />
                     <Route path="/inventory" component={InventoryDashboard} />
                     <Route path="/personnel" component={PersonnelDashboard} />
                     <Route path="/emergency" component={EmergencyDashboard} />
