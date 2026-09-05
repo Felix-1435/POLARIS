@@ -97,11 +97,11 @@ export default function App() {
   return (
     <ThemeContext.Provider value={{ theme, toggle: toggleTheme }}>
       <AuthContext.Provider value={{ user, login, logout }}>
-        <div className={`flex h-screen overflow-hidden ${theme === 'dark' ? 'bg-ice-950' : 'bg-slate-100'}`}>
+        <div className={`flex h-screen overflow-hidden ${theme === 'dark' ? 'bg-ice-950' : 'bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-100'}`}>
           <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
           <div className="flex-1 flex flex-col overflow-hidden">
             <Header user={user} onLogout={logout} onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-            <main className={`flex-1 overflow-y-auto p-4 md:p-6 ${theme === 'dark' ? '' : 'bg-slate-50'}`}>
+            <main className={`flex-1 overflow-y-auto p-4 md:p-6 ${theme === 'dark' ? '' : 'bg-gradient-to-b from-sky-50/80 via-blue-50/60 to-cyan-50/40'}`}>
               <AnimatePresence mode="wait">
                 <motion.div
                   key={location}
