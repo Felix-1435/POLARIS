@@ -1,14 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  getCachedTile,
-  putTile,
-  tileUrlEsri,
-  tileUrlOsm,
-  TILE_ATTRIB,
-} from '@/lib/offlineMapTiles'
 
 declare global {
-  interface Window { L: any }
+  interface Window {
+    L: any
+  }
 }
 
 export type MapMarker = {
@@ -21,7 +16,6 @@ export type MapMarker = {
   kind?: 'station' | 'camp' | 'vessel' | 'port' | 'cargo' | 'emergency' | 'default'
 }
 
-/** Polyline path: array of [lat, lng] */
 export type MapRoute = {
   id: string
   path: [number, number][]
@@ -35,128 +29,71 @@ type Props = {
   routes?: MapRoute[]
   center?: [number, number]
   zoom?: number
-  height?: number | string
+  height?: number
   className?: string
 }
 
 const LEAFLET_CSS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
 const LEAFLET_JS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 
-const STATION_MARKERS: MapMarker[] = [
+/** Esri World Imagery — realistic satellite, no API key */
+const ESRI_URL =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+/** OSM fallback */
+const OSM_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+
+const DEFAULT_MARKERS: MapMarker[] = [
   { id: 'goa', lat: 15.4, lng: 73.8, label: 'Goa / Mormugao Port', kind: 'port', color: '#a78bfa' },
   { id: 'ship', lat: -55.0, lng: 40.0, label: 'MV Sagar Kanya', sub: 'In transit', kind: 'vessel', color: '#38bdf8' },
   { id: 'maitri', lat: -70.767, lng: 11.733, label: 'Maitri Research Station', kind: 'station', color: '#10b981' },
   { id: 'bharati', lat: -69.407, lng: 76.187, label: 'Bharati Research Station', kind: 'station', color: '#10b981' },
   { id: 'camp-a', lat: -70.55, lng: 11.9, label: 'Field Camp A', kind: 'camp', color: '#f59e0b' },
-  { id: 'camp-b', lat: -70.82, lng: 11.45, label: 'Field Camp B', sub: 'Medical alert', kind: 'camp', color: '#ef4444' },
+  { id: 'camp-b', lat: -70.82, lng: 11.45, label: 'Field Camp B', kind: 'camp', color: '#ef4444' },
 ]
 
-function injectLeafletAssets(): Promise<any> {
+function loadLeaflet(): Promise<any> {
   return new Promise((resolve, reject) => {
-    if (!document.querySelector(`link[href="${LEAFLET_CSS}"]`)) {
+    if (typeof window === 'undefined') return reject(new Error('no window'))
+    if (window.L) return resolve(window.L)
+
+    if (!document.querySelector(`link[data-leaflet="1"]`)) {
       const link = document.createElement('link')
       link.rel = 'stylesheet'
       link.href = LEAFLET_CSS
+      link.setAttribute('data-leaflet', '1')
       document.head.appendChild(link)
     }
-    if (!document.getElementById('polaris-leaflet-fix')) {
-      const style = document.createElement('style')
-      style.id = 'polaris-leaflet-fix'
-      style.textContent = `
-        .leaflet-container { width: 100% !important; height: 100% !important; background: #0a1628 !important; }
-        .leaflet-tile-container img, .leaflet-tile { width: 256px !important; height: 256px !important; max-width: none !important; max-height: none !important; }
-        .leaflet-pane { z-index: auto; }
+    if (!document.getElementById('polaris-leaflet-css-fix')) {
+      const st = document.createElement('style')
+      st.id = 'polaris-leaflet-css-fix'
+      st.textContent = `
+        .leaflet-container { background:#0a1628; width:100%; height:100%; }
+        .leaflet-tile { max-width:none !important; max-height:none !important; }
       `
-      document.head.appendChild(style)
+      document.head.appendChild(st)
     }
-    if (window.L) return resolve(window.L)
-    const existing = document.querySelector(`script[src="${LEAFLET_JS}"]`) as HTMLScriptElement | null
+
+    const existing = document.querySelector('script[data-leaflet="1"]') as HTMLScriptElement | null
     if (existing) {
-      if (window.L) return resolve(window.L)
+      const wait = () => (window.L ? resolve(window.L) : setTimeout(wait, 40))
       existing.addEventListener('load', () => resolve(window.L))
+      wait()
       return
     }
-    const s = document.createElement('script')
-    s.src = LEAFLET_JS
-    s.async = true
-    s.onload = () => resolve(window.L)
-    s.onerror = () => reject(new Error('Leaflet failed'))
-    document.head.appendChild(s)
+    const script = document.createElement('script')
+    script.src = LEAFLET_JS
+    script.async = true
+    script.setAttribute('data-leaflet', '1')
+    script.onload = () => resolve(window.L)
+    script.onerror = () => reject(new Error('Failed to load Leaflet from CDN'))
+    document.head.appendChild(script)
   })
 }
 
-function createSatelliteLayer(L: any) {
-  return L.TileLayer.extend({
-    createTile(coords: { x: number; y: number; z: number }, done: (e: any, t: HTMLElement) => void) {
-      const tile = document.createElement('img')
-      tile.alt = ''
-      tile.style.cssText = 'width:256px;height:256px;display:block;'
-      const { x, y, z } = coords
-      const key = `${z}/${x}/${y}`
-
-      const finish = (src: string | null) => {
-        if (!src) {
-          tile.style.background = '#0a1628'
-          done(null, tile)
-          return
-        }
-        let revoked = false
-        const cleanup = () => {
-          if (!revoked && src.startsWith('blob:')) {
-            try { URL.revokeObjectURL(src) } catch {}
-            revoked = true
-          }
-        }
-        tile.onload = () => { cleanup(); done(null, tile) }
-        tile.onerror = () => {
-          cleanup()
-          tile.style.background = '#0a1628'
-          done(null, tile)
-        }
-        tile.src = src
-      }
-
-      ;(async () => {
-        try {
-          const cached = await getCachedTile(key)
-          if (cached) {
-            finish(URL.createObjectURL(cached))
-            return
-          }
-          if (!navigator.onLine) {
-            finish(null)
-            return
-          }
-          let blob: Blob | null = null
-          for (const url of [tileUrlEsri(z, x, y), tileUrlOsm(z, x, y)]) {
-            try {
-              const res = await fetch(url, { mode: 'cors', headers: { Accept: 'image/*' } })
-              if (!res.ok) continue
-              const b = await res.blob()
-              if (b.size < 800) continue
-              blob = b
-              break
-            } catch { /* next */ }
-          }
-          if (!blob) {
-            finish(null)
-            return
-          }
-          await putTile(key, blob).catch(() => {})
-          finish(URL.createObjectURL(blob))
-        } catch {
-          finish(null)
-        }
-      })()
-      return tile
-    },
-  })
-}
-
-function markerIcon(L: any, color: string) {
+function pinIcon(L: any, color: string) {
   return L.divIcon({
-    className: '',
-    html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 10px ${color}"></div>`,
+    className: 'polaris-pin',
+    html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 8px ${color}"></div>`,
     iconSize: [14, 14],
     iconAnchor: [7, 7],
   })
@@ -170,151 +107,175 @@ export default function PolarisMap({
   height = 400,
   className = '',
 }: Props) {
-  const wrapRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<any>(null)
-  const layersRef = useRef<any>(null)
+  const overlayRef = useRef<any>(null)
+  const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
 
-  const pins = markers && markers.length ? markers : STATION_MARKERS
-  const hPx = typeof height === 'number' ? height : 400
+  const pins = markers && markers.length > 0 ? markers : DEFAULT_MARKERS
 
+  // Init map once
   useEffect(() => {
     let cancelled = false
-    let map: any
+    let map: any = null
     let ro: ResizeObserver | null = null
-    const timers: number[] = []
 
-    const invalidate = () => {
+    const run = async () => {
       try {
-        mapRef.current?.invalidateSize({ pan: false })
-      } catch { /* */ }
-    }
+        const L = await loadLeaflet()
+        if (cancelled || !containerRef.current) return
 
-    ;(async () => {
-      try {
-        const L = await injectLeafletAssets()
-        if (cancelled || !wrapRef.current) return
-
-        const el = wrapRef.current
-        // Force pixel size before Leaflet measures
-        el.style.width = '100%'
-        el.style.height = `${hPx}px`
-        el.style.minHeight = `${hPx}px`
+        // Clear any leftover leaflet id on remount
+        const el = containerRef.current
+        if ((el as any)._leaflet_id) {
+          try {
+            const old = (window.L as any).map?.(el)
+            old?.remove?.()
+          } catch { /* */ }
+          delete (el as any)._leaflet_id
+          el.innerHTML = ''
+        }
 
         map = L.map(el, {
           center,
           zoom,
           minZoom: 2,
-          maxZoom: 13,
+          maxZoom: 12,
           zoomControl: true,
-          worldCopyJump: true,
-          maxBounds: L.latLngBounds(L.latLng(-85, -180), L.latLng(85, 180)),
-          maxBoundsViscosity: 0.8,
+          attributionControl: true,
         })
         mapRef.current = map
 
-        const OfflineLayer = createSatelliteLayer(L)
-        new OfflineLayer({
-          attribution: TILE_ATTRIB,
-          maxZoom: 13,
-          minZoom: 2,
-          tileSize: 256,
-          keepBuffer: 4,
-          updateWhenIdle: false,
-          updateWhenZooming: true,
-        }).addTo(map)
-
-        // When zoom ends, force full redraw (fixes half-tiles at world zoom)
-        map.on('zoomend moveend', () => {
-          invalidate()
-          try { map.eachLayer((ly: any) => ly.redraw && ly.redraw()) } catch { /* */ }
+        // Standard layers — most reliable
+        const esri = L.tileLayer(ESRI_URL, {
+          attribution: 'Tiles &copy; Esri',
+          maxZoom: 12,
+          maxNativeZoom: 12,
+          errorTileUrl:
+            'data:image/svg+xml,' +
+            encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect fill="#0a1628" width="256" height="256"/></svg>'),
+        })
+        const osm = L.tileLayer(OSM_URL, {
+          attribution: '&copy; OpenStreetMap',
+          maxZoom: 12,
+          maxNativeZoom: 19,
         })
 
-        setReady(true)
-        ;[0, 100, 300, 600, 1200, 2000].forEach(ms => {
-          timers.push(window.setTimeout(invalidate, ms))
+        esri.addTo(map)
+        // If Esri fails repeatedly, user can still pan; OSM as alternate base
+        esri.on('tileerror', () => {
+          if (!map.hasLayer(osm)) {
+            try {
+              map.removeLayer(esri)
+              osm.addTo(map)
+            } catch { /* */ }
+          }
         })
 
-        ro = new ResizeObserver(() => {
-          invalidate()
-        })
+        const fixSize = () => {
+          try {
+            map.invalidateSize(true)
+          } catch { /* */ }
+        }
+        ;[50, 200, 500, 1000, 2000].forEach(t => setTimeout(fixSize, t))
+        ro = new ResizeObserver(fixSize)
         ro.observe(el)
-        window.addEventListener('resize', invalidate)
-      } catch (e) {
-        console.error('PolarisMap', e)
+        window.addEventListener('resize', fixSize)
+        map.on('zoomend moveend', fixSize)
+
+        if (!cancelled) setReady(true)
+      } catch (e: any) {
+        console.error(e)
+        if (!cancelled) setError(e?.message || 'Map failed to load')
       }
-    })()
+    }
+
+    run()
 
     return () => {
       cancelled = true
-      timers.forEach(clearTimeout)
       ro?.disconnect()
-      window.removeEventListener('resize', invalidate)
-      if (mapRef.current) {
-        mapRef.current.remove()
-        mapRef.current = null
-      }
+      try {
+        mapRef.current?.remove()
+      } catch { /* */ }
+      mapRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Markers + routes
+  // Markers & routes when ready or data changes
   useEffect(() => {
     const map = mapRef.current
     const L = window.L
     if (!map || !L || !ready) return
 
-    if (layersRef.current) map.removeLayer(layersRef.current)
+    if (overlayRef.current) {
+      try {
+        map.removeLayer(overlayRef.current)
+      } catch { /* */ }
+    }
     const group = L.layerGroup()
 
-    routes.forEach(r => {
-      if (!r.path?.length) return
+    ;(routes || []).forEach(r => {
+      if (!r.path || r.path.length < 2) return
       L.polyline(r.path, {
         color: r.color || '#22d3ee',
         weight: r.weight ?? 2.5,
-        opacity: 0.85,
+        opacity: 0.9,
         dashArray: r.dashed ? '8 6' : undefined,
-        lineCap: 'round',
-        lineJoin: 'round',
       }).addTo(group)
     })
 
     pins.forEach(m => {
+      if (m.lat == null || m.lng == null || Number.isNaN(m.lat) || Number.isNaN(m.lng)) return
       const color =
         m.color ||
-        (m.kind === 'emergency' ? '#ef4444'
-          : m.kind === 'station' ? '#10b981'
-          : m.kind === 'camp' ? '#f59e0b'
-          : m.kind === 'vessel' ? '#38bdf8'
-          : m.kind === 'port' ? '#a78bfa'
-          : '#22d3ee')
-      L.marker([m.lat, m.lng], { icon: markerIcon(L, color) })
+        ({
+          emergency: '#ef4444',
+          station: '#10b981',
+          camp: '#f59e0b',
+          vessel: '#38bdf8',
+          port: '#a78bfa',
+          cargo: '#22d3ee',
+        } as Record<string, string>)[m.kind || ''] ||
+        '#22d3ee'
+      L.marker([m.lat, m.lng], { icon: pinIcon(L, color) })
         .bindPopup(
-          `<div style="min-width:130px"><strong>${m.label}</strong>${
-            m.sub ? `<br/><span style="opacity:.8;font-size:12px">${m.sub}</span>` : ''
-          }<br/><span style="font-size:11px;opacity:.55;font-family:monospace">${m.lat.toFixed(3)}, ${m.lng.toFixed(3)}</span></div>`
+          `<strong>${m.label}</strong>${m.sub ? `<br/><span style="opacity:.8">${m.sub}</span>` : ''}<br/><span style="font-size:11px;opacity:.5">${m.lat.toFixed(3)}, ${m.lng.toFixed(3)}</span>`
         )
         .addTo(group)
     })
 
     group.addTo(map)
-    layersRef.current = group
-    map.invalidateSize({ pan: false })
+    overlayRef.current = group
+    try {
+      map.invalidateSize(true)
+    } catch { /* */ }
   }, [pins, routes, ready])
 
   return (
-    <div
-      ref={wrapRef}
-      className={className}
-      style={{
-        width: '100%',
-        height: hPx,
-        minHeight: hPx,
-        background: '#0a1628',
-        position: 'relative',
-        zIndex: 0,
-        overflow: 'hidden',
-      }}
-    />
+    <div className={className} style={{ width: '100%', height, minHeight: height, position: 'relative', background: '#0a1628' }}>
+      {error && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+            color: '#94a3b8',
+            fontSize: 13,
+            textAlign: 'center',
+            background: '#0a1628',
+          }}
+        >
+          Map could not load: {error}. Check network / ad-blocker blocking unpkg.com or Esri tiles.
+        </div>
+      )}
+      <div ref={containerRef} style={{ width: '100%', height: '100%', minHeight: height }} />
+    </div>
   )
 }

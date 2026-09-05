@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Download, Trash2, Wifi, WifiOff, Map as MapIcon, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -6,22 +6,11 @@ import {
   downloadOfflinePack,
   countCachedTiles,
   clearTileCache,
-  getCachedTile,
-  putTile,
-  tileUrl,
-  tileUrlEsri,
-  tileUrlOsm,
-  TILE_ATTRIB,
   type PackProgress,
   type StationPack,
 } from '@/lib/offlineMapTiles'
+import PolarisMap, { type MapMarker } from './PolarisMap'
 import { STATIONS } from '@/lib/offlineEmergencies'
-
-declare global {
-  interface Window {
-    L: any
-  }
-}
 
 type EmergencyPin = {
   id: string
@@ -37,138 +26,21 @@ type Props = {
   height?: number
 }
 
-const LEAFLET_CSS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-const LEAFLET_JS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-
-function loadLeaflet(): Promise<any> {
-  return new Promise((resolve, reject) => {
-    if (window.L) {
-      resolve(window.L)
-      return
-    }
-    if (!document.querySelector(`link[href="${LEAFLET_CSS}"]`)) {
-      const link = document.createElement('link')
-      link.rel = 'stylesheet'
-      link.href = LEAFLET_CSS
-      document.head.appendChild(link)
-    }
-    if (!document.getElementById('polaris-leaflet-fix')) {
-      const style = document.createElement('style')
-      style.id = 'polaris-leaflet-fix'
-      style.textContent = '.leaflet-container{width:100%!important;height:100%!important;background:#0a1628}.leaflet-tile{max-width:none!important;max-height:none!important}.leaflet-container img.leaflet-tile{max-width:none!important}'
-      document.head.appendChild(style)
-    }
-    const existing = document.querySelector(`script[src="${LEAFLET_JS}"]`)
-    if (existing) {
-      existing.addEventListener('load', () => resolve(window.L))
-      return
-    }
-    const script = document.createElement('script')
-    script.src = LEAFLET_JS
-    script.async = true
-    script.onload = () => resolve(window.L)
-    script.onerror = () => reject(new Error('Failed to load Leaflet'))
-    document.head.appendChild(script)
-  })
-}
-
-/** Leaflet tile layer that prefers IndexedDB cache, falls back to network and caches. */
-function createOfflineTileLayer(L: any) {
-  return L.TileLayer.extend({
-    createTile: function (coords: { x: number; y: number; z: number }, done: (err: any, tile: HTMLElement) => void) {
-      const tile = document.createElement('img')
-      tile.alt = ''
-      tile.setAttribute('role', 'presentation')
-      // Fixed 256px — percentage width causes half-tile rendering bugs
-      tile.style.cssText = 'width:256px;height:256px;display:block;'
-
-      const z = coords.z
-      const x = coords.x
-      const y = coords.y
-      const key = `${z}/${x}/${y}`
-
-      ;(async () => {
-        try {
-          const cached = await getCachedTile(key)
-          if (cached) {
-            const url = URL.createObjectURL(cached)
-            tile.onload = () => {
-              URL.revokeObjectURL(url)
-              done(null, tile)
-            }
-            tile.onerror = () => {
-              URL.revokeObjectURL(url)
-              done(null, tile)
-            }
-            tile.src = url
-            return
-          }
-
-          // Network fetch + cache (OSM, then Esri — no API key)
-          if (!navigator.onLine) {
-            tile.style.background = '#0f172a'
-            done(null, tile)
-            return
-          }
-          let blob: Blob | null = null
-          for (const url of [tileUrlEsri(z, x, y), tileUrlOsm(z, x, y)]) {
-            try {
-              const res = await fetch(url, { mode: 'cors', headers: { Accept: 'image/png,image/*' } })
-              if (!res.ok) continue
-              const b = await res.blob()
-              if (b.size < 500) continue
-              blob = b
-              break
-            } catch { /* try next */ }
-          }
-          if (!blob) {
-            tile.style.background = '#0f172a'
-            done(null, tile)
-            return
-          }
-          await putTile(key, blob).catch(() => {})
-          const obj = URL.createObjectURL(blob)
-          tile.onload = () => {
-            URL.revokeObjectURL(obj)
-            done(null, tile)
-          }
-          tile.onerror = () => {
-            URL.revokeObjectURL(obj)
-            done(null, tile)
-          }
-          tile.src = obj
-        } catch {
-          tile.style.background = '#0f172a'
-          done(null, tile)
-        }
-      })()
-
-      return tile
-    },
-  })
-}
-
 const PACK_STATIONS: StationPack[] = [
   { id: 'maitri', name: 'Maitri', lat: -70.767, lng: 11.733, radius: 2 },
   { id: 'bharati', name: 'Bharati', lat: -69.407, lng: 76.187, radius: 2 },
   { id: 'camp-a', name: 'Field Camp A', lat: -70.55, lng: 11.9, radius: 1 },
   { id: 'camp-b', name: 'Field Camp B', lat: -70.82, lng: 11.45, radius: 1 },
-  // Regional overview (Southern Ocean approach)
   { id: 'overview', name: 'Polar overview', lat: -70.0, lng: 40.0, radius: 1, zooms: [3, 4, 5, 6] },
 ]
 
 export default function OfflineTileMap({ emergencies = [], className, height = 420 }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<any>(null)
-  const [ready, setReady] = useState(false)
   const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true)
   const [tileCount, setTileCount] = useState(0)
   const [progress, setProgress] = useState<PackProgress | null>(null)
   const [downloading, setDownloading] = useState(false)
 
-  const refreshCount = async () => {
-    setTileCount(await countCachedTiles())
-  }
+  const refreshCount = async () => setTileCount(await countCachedTiles())
 
   useEffect(() => {
     const on = () => setOnline(true)
@@ -182,117 +54,26 @@ export default function OfflineTileMap({ emergencies = [], className, height = 4
     }
   }, [])
 
-  useEffect(() => {
-    let cancelled = false
-    let map: any
-
-    ;(async () => {
-      try {
-        const L = await loadLeaflet()
-        if (cancelled || !containerRef.current) return
-
-        // Fix default marker icons when using CDN
-        delete (L.Icon.Default.prototype as any)._getIconUrl
-        L.Icon.Default.mergeOptions({
-          iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-          iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-          shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        })
-
-        map = L.map(containerRef.current, {
-          center: [-70.5, 30],
-          zoom: 4,
-          minZoom: 2,
-          maxZoom: 12,
-          zoomControl: true,
-        })
-        mapRef.current = map
-
-        const OfflineLayer = createOfflineTileLayer(L)
-        const layer = new OfflineLayer({
-          attribution: TILE_ATTRIB,
-          maxZoom: 13,
-          minZoom: 2,
-          tileSize: 256,
-          keepBuffer: 2,
-        })
-        layer.addTo(map)
-
-        // Station markers
-        const stationIcon = (color: string) =>
-          L.divIcon({
-            className: '',
-            html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 8px ${color}"></div>`,
-            iconSize: [14, 14],
-            iconAnchor: [7, 7],
-          })
-
-        STATIONS.forEach(s => {
-          const color = s.type === 'station' ? '#10b981' : s.type === 'camp' ? '#f59e0b' : '#38bdf8'
-          L.marker([s.lat, s.lng], { icon: stationIcon(color) })
-            .bindPopup(`<strong>${s.name}</strong><br/><span style="font-size:11px;opacity:.8">${s.type} · ${s.lat.toFixed(3)}, ${s.lng.toFixed(3)}</span>`)
-            .addTo(map)
-        })
-
-        // Emergency pins
-        emergencies.forEach(e => {
-          if (e.lat == null || e.lng == null) return
-          L.marker([e.lat, e.lng], {
-            icon: stationIcon('#ef4444'),
-          })
-            .bindPopup(`<strong style="color:#f87171">${e.id}</strong><br/>${e.label || e.type || 'Emergency'}`)
-            .addTo(map)
-        })
-
-        setReady(true)
-        ;[50, 200, 500, 1000, 2000].forEach(ms => {
-          setTimeout(() => { try { map.invalidateSize(true) } catch {} }, ms)
-        })
-        if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
-          new ResizeObserver(() => { try { map.invalidateSize(true) } catch {} }).observe(containerRef.current)
-        }
-      } catch (err) {
-        console.error(err)
-        toast.error('Map failed to load')
-      }
-    })()
-
-    return () => {
-      cancelled = true
-      if (mapRef.current) {
-        mapRef.current.remove()
-        mapRef.current = null
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Update emergency markers when list changes
-  useEffect(() => {
-    const map = mapRef.current
-    const L = window.L
-    if (!map || !L || !ready) return
-
-    // Remove previous emergency layer group if any
-    if ((map as any)._emGroup) {
-      map.removeLayer((map as any)._emGroup)
-    }
-    const group = L.layerGroup()
-    emergencies.forEach(e => {
-      if (e.lat == null || e.lng == null) return
-      const icon = L.divIcon({
-        className: '',
-        html: `<div style="width:16px;height:16px;border-radius:50%;background:#ef4444;border:2px solid #fff;box-shadow:0 0 10px #ef4444;animation:pulse 1.5s infinite"></div>`,
-        iconSize: [16, 16],
-        iconAnchor: [8, 8],
-      })
-      L.marker([e.lat, e.lng], { icon })
-        .bindPopup(`<strong style="color:#f87171">${e.id}</strong><br/>${e.label || 'Emergency'}`)
-        .addTo(group)
-    })
-    group.addTo(map)
-    ;(map as any)._emGroup = group
-  }, [emergencies, ready])
+  const markers: MapMarker[] = [
+    ...STATIONS.map(s => ({
+      id: s.id,
+      lat: s.lat,
+      lng: s.lng,
+      label: s.name,
+      kind: (s.type === 'station' ? 'station' : s.type === 'camp' ? 'camp' : 'vessel') as MapMarker['kind'],
+      color: s.type === 'station' ? '#10b981' : s.type === 'camp' ? '#f59e0b' : '#38bdf8',
+    })),
+    ...emergencies
+      .filter(e => e.lat != null && e.lng != null)
+      .map(e => ({
+        id: e.id,
+        lat: e.lat,
+        lng: e.lng,
+        label: e.label || e.id,
+        kind: 'emergency' as const,
+        color: '#ef4444',
+      })),
+  ]
 
   const handleDownload = async () => {
     if (!navigator.onLine) {
@@ -303,12 +84,9 @@ export default function OfflineTileMap({ emergencies = [], className, height = 4
     try {
       await downloadOfflinePack(PACK_STATIONS, p => setProgress(p))
       await refreshCount()
-      toast.success('Offline map pack saved on this device')
-      // Force tile refresh
-      if (mapRef.current) mapRef.current.invalidateSize()
+      toast.success('Offline pack saved')
     } catch (e: any) {
-      toast.error(e.message || 'Pack download failed')
-      setProgress({ done: 0, total: 0, status: 'error', message: e.message })
+      toast.error(e.message || 'Download failed')
     } finally {
       setDownloading(false)
     }
@@ -318,18 +96,24 @@ export default function OfflineTileMap({ emergencies = [], className, height = 4
     await clearTileCache()
     await refreshCount()
     setProgress(null)
-    toast.message('Offline tile cache cleared')
+    toast.message('Tile cache cleared')
   }
+
+  const h = Math.max(height || 420, 320)
 
   return (
     <div className={cn('space-y-3', className)}>
       <div className="flex flex-wrap items-center gap-2">
-        <span className={cn(
-          'inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-full border font-medium',
-          online ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-        )}>
+        <span
+          className={cn(
+            'inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-full border font-medium',
+            online
+              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+              : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+          )}
+        >
           {online ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
-          {online ? 'Online tiles' : 'Offline cache'}
+          {online ? 'Online' : 'Offline'}
         </span>
         <span className="text-xs text-ice-500 flex items-center gap-1">
           <MapIcon className="w-3.5 h-3.5" />
@@ -337,6 +121,7 @@ export default function OfflineTileMap({ emergencies = [], className, height = 4
         </span>
         <div className="flex-1" />
         <button
+          type="button"
           onClick={handleDownload}
           disabled={downloading}
           className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-medium disabled:opacity-50"
@@ -345,8 +130,9 @@ export default function OfflineTileMap({ emergencies = [], className, height = 4
           {downloading ? 'Downloading…' : 'Download offline pack'}
         </button>
         <button
+          type="button"
           onClick={handleClear}
-          className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-ice-700 text-ice-400 hover:text-ice-200 hover:bg-ice-800/50"
+          className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-ice-700 text-ice-400 hover:text-ice-200"
         >
           <Trash2 className="w-3.5 h-3.5" /> Clear
         </button>
@@ -367,19 +153,12 @@ export default function OfflineTileMap({ emergencies = [], className, height = 4
         </div>
       )}
 
-      <div
-        ref={containerRef}
-        className="w-full rounded-xl overflow-hidden border border-ice-800/50 bg-ice-950"
-        style={{
-          height: typeof height === 'number' ? Math.max(height, 320) : height,
-          minHeight: 320,
-          width: '100%',
-          display: height === 1 ? 'none' : undefined,
-        }}
-      />
+      <div className="rounded-xl overflow-hidden border border-ice-800/50" style={{ height: h }}>
+        <PolarisMap height={h} center={[-65, 40]} zoom={3} markers={markers} />
+      </div>
 
       <p className="text-[11px] text-ice-500">
-        Uses free OpenStreetMap + Esri tiles (no API key). If you still see "API KEY REQUIRED", click Clear then Download offline pack — that was old Carto cache.
+        Satellite map (Esri). Offline pack stores tiles in IndexedDB for use without internet.
       </p>
     </div>
   )
