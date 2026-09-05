@@ -97,18 +97,13 @@ export function latLngToTile(lat: number, lng: number, z: number): { x: number; 
  * Primary: OpenStreetMap
  * Fallback imagery: Esri World Imagery (better for polar coastlines)
  */
-export const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+/** Esri World Imagery — realistic satellite, no API key. OSM as fallback. */
 export const TILE_URL_ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-export const TILE_SUBDOMAINS = ['a'] // OSM single host; be polite with rate
-export const TILE_ATTRIB = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-
-export function tileUrl(z: number, x: number, y: number, _s = 'a'): string {
-  // Standard OSM — no API key
-  return TILE_URL
-    .replace('{z}', String(z))
-    .replace('{x}', String(x))
-    .replace('{y}', String(y))
-}
+export const TILE_URL_OSM = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+/** @deprecated use tileUrl() */
+export const TILE_URL = TILE_URL_ESRI
+export const TILE_SUBDOMAINS = ['a']
+export const TILE_ATTRIB = 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics'
 
 export function tileUrlEsri(z: number, x: number, y: number): string {
   // Esri uses z/y/x order
@@ -118,11 +113,24 @@ export function tileUrlEsri(z: number, x: number, y: number): string {
     .replace('{x}', String(x))
 }
 
+export function tileUrlOsm(z: number, x: number, y: number): string {
+  return TILE_URL_OSM
+    .replace('{z}', String(z))
+    .replace('{x}', String(x))
+    .replace('{y}', String(y))
+}
+
+/** Primary = satellite (Esri), fallback = OSM */
+export function tileUrl(z: number, x: number, y: number, _s = 'a'): string {
+  return tileUrlEsri(z, x, y)
+}
+
+
 async function fetchAndCache(z: number, x: number, y: number): Promise<boolean> {
   const key = `${z}/${x}/${y}`
   const existing = await getCachedTile(key)
   if (existing) return true
-  const urls = [tileUrl(z, x, y), tileUrlEsri(z, x, y)]
+  const urls = [tileUrlEsri(z, x, y), tileUrlOsm(z, x, y)]
   for (const url of urls) {
     try {
       const res = await fetch(url, { mode: 'cors', headers: { Accept: 'image/png,image/*' } })

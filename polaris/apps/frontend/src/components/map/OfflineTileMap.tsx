@@ -10,6 +10,7 @@ import {
   putTile,
   tileUrl,
   tileUrlEsri,
+  tileUrlOsm,
   TILE_ATTRIB,
   type PackProgress,
   type StationPack,
@@ -108,7 +109,7 @@ function createOfflineTileLayer(L: any) {
             return
           }
           let blob: Blob | null = null
-          for (const url of [tileUrl(z, x, y), tileUrlEsri(z, x, y)]) {
+          for (const url of [tileUrlEsri(z, x, y), tileUrlOsm(z, x, y)]) {
             try {
               const res = await fetch(url, { mode: 'cors', headers: { Accept: 'image/png,image/*' } })
               if (!res.ok) continue
