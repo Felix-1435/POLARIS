@@ -95,3 +95,19 @@ html.light .ai-bubble-user {
   background: linear-gradient(135deg, #0891b2, #2563eb);
   color: white;
 }
+
+/* 3D card polish for dashboards */
+.card-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
+}
+.card-3d:hover {
+  transform: translateY(-6px) rotateX(2deg) scale(1.01);
+}
+
+html.dark .card-3d:hover {
+  box-shadow: 0 20px 40px -12px rgba(0,0,0,0.5), 0 0 40px rgba(14,165,233,0.12);
+}
+html.light .card-3d:hover {
+  box-shadow: 0 16px 40px -12px rgba(14,165,233,0.15), 0 4px 12px rgba(15,23,42,0.06);
+}
