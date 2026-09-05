@@ -248,25 +248,20 @@ export default function CargoScan() {
         subtitle="Select expedition & cargo · Role-based scan · Live sync"
         backTo="/cargo"
         backLabel="← Cargo & Logistics"
+        actions={
+          <div className="flex items-center gap-2">
+            <span className={cn(
+              "text-xs px-2.5 py-1 rounded-full border font-medium",
+              isOnline ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : "bg-amber-500/10 text-amber-400 border-amber-500/30"
+            )}>
+              {isOnline ? '● Online' : '○ Offline'}
+            </span>
+            <button type="button" onClick={resetCargo} className="text-xs px-3 py-1.5 rounded-lg bg-ice-800 text-ice-400 hover:text-ice-200 border border-ice-700 flex items-center gap-1">
+              <RefreshCw className="w-3 h-3" /> Reset
+            </button>
+          </div>
+        }
       />
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-ice-50">Cargo Checkpoint Scanner</h1>
-          <p className="text-ice-500 text-sm">Select expedition & cargo · Role-based scan · Live sync</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={cn(
-            "text-xs px-2.5 py-1 rounded-full border font-medium",
-            isOnline ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : "bg-amber-500/10 text-amber-400 border-amber-500/30"
-          )}>
-            {isOnline ? '● Online' : '○ Offline'}
-          </span>
-          <button onClick={resetCargo} className="text-xs px-3 py-1.5 rounded-lg bg-ice-800 text-ice-400 hover:text-ice-200 border border-ice-700 flex items-center gap-1">
-            <RefreshCw className="w-3 h-3" /> Reset
-          </button>
-        </div>
-      </div>
 
       {/* Expedition + Cargo Selectors */}
       <div className="glass rounded-xl border border-ice-800/50 p-4 grid sm:grid-cols-2 gap-4">
