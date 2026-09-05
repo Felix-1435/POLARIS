@@ -363,8 +363,7 @@ export default function OfflineTileMap({ emergencies = [], className, height = 4
       />
 
       <p className="text-[11px] text-ice-500">
-        Offline pack covers Maitri, Bharati, Field Camps A/B and regional overview (zooms 3–10).
-        Browse the map online once to cache extra tiles automatically. Works fully offline after pack download.
+        Uses free OpenStreetMap + Esri tiles (no API key). If you still see "API KEY REQUIRED", click Clear then Download offline pack — that was old Carto cache.
       </p>
     </div>
   )

@@ -4,7 +4,7 @@
  * "Download pack" prefetches a grid around each station for offline use.
  */
 
-const DB_NAME = 'polaris_map_tiles_v1'
+const DB_NAME = 'polaris_map_tiles_v2_osm'
 const STORE = 'tiles'
 const META = 'meta'
 const DB_VERSION = 1
