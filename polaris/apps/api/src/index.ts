@@ -546,6 +546,47 @@ app.get('/api/incidents', async (_req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }) }
 })
 
+app.post('/api/incidents', async (req, res) => {
+  try {
+    const b = req.body
+    const id = b.id || `INC-${Date.now().toString(36).toUpperCase()}`
+    const row = {
+      id,
+      type: b.type || 'Medical',
+      severity: b.severity || 'High',
+      person_id: b.person_id || null,
+      location: b.location || 'Unknown',
+      status: b.status || 'active',
+      description: b.description || null,
+      created_at: new Date().toISOString(),
+    }
+    if (pool) {
+      // Extend table if needed for lat/lng notes
+      try {
+        await pool.query(`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION`)
+        await pool.query(`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION`)
+      } catch {}
+      await pool.query(
+        `INSERT INTO incidents (id, type, severity, person_id, location, status, description)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)
+         ON CONFLICT (id) DO UPDATE SET status=EXCLUDED.status, description=EXCLUDED.description`,
+        [row.id, row.type, row.severity, row.person_id, row.location, row.status, row.description]
+      )
+      if (b.lat != null || b.lng != null) {
+        try {
+          await pool.query(`UPDATE incidents SET lat=$1, lng=$2 WHERE id=$3`, [b.lat ?? null, b.lng ?? null, row.id])
+        } catch {}
+      }
+      const { rows } = await pool.query('SELECT * FROM incidents WHERE id=$1', [row.id])
+      return res.status(201).json(rows[0] || row)
+    }
+    const existing = mem.incidents.findIndex((i: any) => i.id === id)
+    if (existing >= 0) mem.incidents[existing] = { ...mem.incidents[existing], ...row, lat: b.lat, lng: b.lng }
+    else mem.incidents.unshift({ ...row, lat: b.lat, lng: b.lng })
+    res.status(201).json({ ...row, lat: b.lat, lng: b.lng })
+  } catch (e: any) { res.status(500).json({ error: e.message }) }
+})
+
 app.post('/api/ai/ask', async (req, res) => {
   const question = req.body.question || ''
   const systemPrompt = `You are POLARIS AI Commander for NCPOR polar expedition management.
