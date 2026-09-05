@@ -1,58 +1,80 @@
 import { motion } from 'framer-motion'
-import { Package, CheckCircle, Clock, AlertTriangle, Ship, ArrowRight } from 'lucide-react'
+import { Package, Ship, Plane, ScanLine, ArrowRight } from 'lucide-react'
 import { Link } from 'wouter'
 import { cn } from '@/lib/utils'
 import CargoLiveMap from '@/components/map/CargoLiveMap'
-import { CARGO_SHIPMENTS } from '@/lib/cargoShipments'
+import { CARGO_SHIPMENTS, loadShipments, type CargoShipment } from '@/lib/cargoShipments'
+import { useEffect, useState } from 'react'
 
 const stats = [
   { label: 'Total Cargo', value: '248', icon: Package },
-  { label: 'In Transit', value: '17', icon: Ship },
-  { label: 'Delivered', value: '186', icon: CheckCircle },
-  { label: 'Delayed', value: '5', icon: AlertTriangle },
-  { label: 'Pending', value: '40', icon: Clock },
+  { label: 'Sea transport', value: '—', icon: Ship, key: 'Sea' as const },
+  { label: 'Air transport', value: '—', icon: Plane, key: 'Air' as const },
 ]
 
-const recent = CARGO_SHIPMENTS.map(c => ({ id: c.id, item: c.name, dest: c.destination, status: c.status, progress: c.progress }))
-
 export default function CargoDashboard() {
+  const [list, setList] = useState<CargoShipment[]>(CARGO_SHIPMENTS)
+
+  useEffect(() => {
+    setList(loadShipments())
+  }, [])
+
+  const seaCount = list.filter(c => (c.transport || 'Sea') === 'Sea').length
+  const airCount = list.filter(c => c.transport === 'Air').length
+  const recent = list.map(c => ({
+    id: c.id,
+    item: c.name,
+    dest: c.destination,
+    status: c.status,
+    progress: c.progress,
+    transport: c.transport || 'Sea',
+  }))
+
+  const kpi = [
+    { label: 'Total shipments', value: String(list.length), icon: Package },
+    { label: 'Sea transport', value: String(seaCount), icon: Ship },
+    { label: 'Air transport', value: String(airCount), icon: Plane },
+  ]
+
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto">
+    <div className="space-y-6 max-w-[1200px] mx-auto">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-ice-50 tracking-tight">Cargo & Logistics</h1>
-          <p className="text-ice-500 text-sm">End-to-end tracking from India to polar stations</p>
+          <p className="text-sm text-ice-500 mt-0.5">Sea & air delivery · India → Antarctica</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Link href="/cargo/registry">
-            <a className="px-3.5 py-2 rounded-xl bg-ice-800/80 text-sm text-ice-300 hover:bg-ice-700 border border-ice-700">Registry</a>
+        <div className="flex gap-2">
+          <Link href="/cargo/scan">
+            <a className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-ice-700 text-ice-300 text-sm hover:bg-ice-800/50">
+              <ScanLine className="w-4 h-4" /> Scan Cargo
+            </a>
           </Link>
           <Link href="/cargo/tracking">
-            <a className="px-3.5 py-2 rounded-xl bg-ice-800/80 text-sm text-ice-300 hover:bg-ice-700 border border-ice-700">Live Tracking</a>
-          </Link>
-          <Link href="/cargo/scan">
-            <a className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 text-sm text-white font-medium shadow-lg shadow-cyan-600/20">
-              Scan Cargo
+            <a className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500">
+              Live tracking
             </a>
           </Link>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {stats.map((s, i) => {
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {kpi.map((s, i) => {
           const Icon = s.icon
           return (
             <motion.div
               key={s.label}
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              whileHover={{ y: -4, scale: 1.02 }}
-              className="card-3d glass rounded-2xl p-4 border border-ice-800/50"
+              className="glass rounded-2xl border border-ice-800/50 p-4 flex items-center gap-3"
             >
-              <Icon className="w-5 h-5 text-cyan-400 mb-2" />
-              <p className="text-2xl font-bold text-ice-50 tracking-tight">{s.value}</p>
-              <p className="text-xs text-ice-400">{s.label}</p>
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/15 flex items-center justify-center">
+                <Icon className="w-5 h-5 text-cyan-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-ice-50">{s.value}</p>
+                <p className="text-xs text-ice-500">{s.label}</p>
+              </div>
             </motion.div>
           )
         })}
@@ -61,11 +83,11 @@ export default function CargoDashboard() {
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
+        transition={{ delay: 0.2 }}
         className="glass rounded-2xl border border-ice-800/50 overflow-hidden"
       >
         <div className="px-5 py-3.5 border-b border-ice-800/50 font-semibold text-ice-100 text-sm flex items-center justify-between">
-          Recent Shipments
+          <span>Recent Shipments</span>
           <Link href="/cargo/registry">
             <a className="text-xs text-cyan-400 font-normal flex items-center gap-1">
               View all <ArrowRight className="w-3 h-3" />
@@ -79,14 +101,26 @@ export default function CargoDashboard() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 + i * 0.04 }}
-              className="px-5 py-3 flex items-center gap-4 hover:bg-ice-900/30 transition-colors"
+              className="px-5 py-3 flex items-center gap-3 sm:gap-4 hover:bg-ice-900/30 transition-colors flex-wrap sm:flex-nowrap"
             >
-              <span className="font-mono text-sm text-cyan-400 w-20">{r.id}</span>
-              <span className="flex-1 text-sm text-ice-200 truncate">{r.item}</span>
-              <span className="text-xs text-ice-500 w-24 hidden sm:block">{r.dest}</span>
+              <span className="font-mono text-sm text-cyan-400 w-20 shrink-0">{r.id}</span>
+              <span className="flex-1 text-sm text-ice-200 truncate min-w-[120px]">{r.item}</span>
               <span
                 className={cn(
-                  'text-xs px-2 py-0.5 rounded-full font-medium w-24 text-center',
+                  'text-[10px] px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1 border shrink-0',
+                  r.transport === 'Air'
+                    ? 'bg-violet-500/15 text-violet-300 border-violet-500/30'
+                    : 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                )}
+                title={r.transport === 'Air' ? 'Air transport' : 'Sea transport'}
+              >
+                {r.transport === 'Air' ? <Plane className="w-3 h-3" /> : <Ship className="w-3 h-3" />}
+                {r.transport}
+              </span>
+              <span className="text-xs text-ice-500 w-24 hidden md:block">{r.dest}</span>
+              <span
+                className={cn(
+                  'text-xs px-2 py-0.5 rounded-full font-medium w-24 text-center shrink-0',
                   r.status === 'Delivered' && 'bg-emerald-500/15 text-emerald-400',
                   r.status === 'In Transit' && 'bg-blue-500/15 text-blue-400',
                   r.status === 'Delayed' && 'bg-amber-500/15 text-amber-400',
@@ -95,7 +129,7 @@ export default function CargoDashboard() {
               >
                 {r.status}
               </span>
-              <div className="w-20 h-1.5 bg-ice-800 rounded-full overflow-hidden hidden md:block">
+              <div className="w-20 h-1.5 bg-ice-800 rounded-full overflow-hidden hidden lg:block">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${r.progress}%` }}
@@ -114,15 +148,19 @@ export default function CargoDashboard() {
         transition={{ delay: 0.35 }}
         className="glass rounded-2xl border border-ice-800/50 overflow-hidden"
       >
-        <div className="px-5 py-3 border-b border-ice-800/50 flex items-center justify-between">
+        <div className="px-5 py-3 border-b border-ice-800/50 flex items-center justify-between flex-wrap gap-2">
           <h2 className="font-semibold text-ice-100 text-sm">Live cargo positions</h2>
-          <Link href="/cargo/tracking">
-            <a className="text-xs text-cyan-400 flex items-center gap-1">
-              Open tracking <ArrowRight className="w-3 h-3" />
-            </a>
-          </Link>
+          <div className="flex items-center gap-3 text-[10px] text-ice-500">
+            <span className="flex items-center gap-1"><Ship className="w-3 h-3 text-sky-400" /> Sea route</span>
+            <span className="flex items-center gap-1"><Plane className="w-3 h-3 text-violet-400" /> Air route</span>
+            <Link href="/cargo/tracking">
+              <a className="text-xs text-cyan-400 flex items-center gap-1">
+                Open tracking <ArrowRight className="w-3 h-3" />
+              </a>
+            </Link>
+          </div>
         </div>
-        <CargoLiveMap compact />
+        <CargoLiveMap compact items={list} />
       </motion.div>
     </div>
   )
