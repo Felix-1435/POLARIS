@@ -1,19 +1,24 @@
 import { useRoute } from 'wouter'
 import { Users, Package, Droplet, Coffee, Heart, Wrench } from 'lucide-react'
+import PageHeader from '@/components/shared/PageHeader'
 
 export default function ExpeditionDetail() {
   const [, params] = useRoute('/expeditions/:id')
+  const id = params?.id || 'ANT-47'
+
   return (
     <div className="space-y-6 max-w-[1000px] mx-auto">
-      <div>
-        <p className="text-cyan-400 font-mono text-sm">{params?.id}</p>
-        <h1 className="text-2xl font-bold text-ice-50">Antarctica Summer Expedition 2026</h1>
-      </div>
+      <PageHeader
+        title="Antarctica Summer Expedition 2026"
+        subtitle={id}
+        backTo="/expeditions"
+        backLabel="← All Expeditions"
+      />
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {[
           { label: 'Personnel', value: '82/85', icon: Users, pct: 96 },
           { label: 'Cargo', value: '156/160', icon: Package, pct: 97 },
-          { label: 'Droplet', value: '84%', icon: Droplet, pct: 84 },
+          { label: 'Fuel', value: '84%', icon: Droplet, pct: 84 },
           { label: 'Food', value: '91%', icon: Coffee, pct: 91 },
           { label: 'Medical', value: '100%', icon: Heart, pct: 100 },
           { label: 'Equipment', value: '94%', icon: Wrench, pct: 94 },

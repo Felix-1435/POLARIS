@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Ship, MapPin, Package, Radio } from 'lucide-react'
 import CargoLiveMap from '@/components/map/CargoLiveMap'
+import PageHeader from '@/components/shared/PageHeader'
 
 const focus = {
   id: 'ANT-001',
@@ -15,12 +16,13 @@ const focus = {
 export default function CargoTracking() {
   return (
     <div className="space-y-6 max-w-[1200px] mx-auto">
-      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold text-ice-50 tracking-tight">Live Cargo Tracking</h1>
-        <p className="text-ice-500 text-sm">Real-time positions on the India → Antarctica sealift corridor</p>
-      </motion.div>
+      <PageHeader
+        title="Live Cargo Tracking"
+        subtitle="Real-time positions on the India → Antarctica sealift corridor"
+        backTo="/cargo"
+        backLabel="← Cargo & Logistics"
+      />
 
-      {/* Focus card */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -44,7 +46,9 @@ export default function CargoTracking() {
         <div className="grid sm:grid-cols-4 gap-3 p-4 text-sm border-b border-ice-800/40">
           <div className="bg-ice-900/40 rounded-xl p-3 border border-ice-800/50">
             <p className="text-ice-500 text-[10px] uppercase tracking-wide">Current location</p>
-            <p className="text-ice-100 font-medium mt-0.5 flex items-center gap-1"><Ship className="w-3.5 h-3.5 text-cyan-400" /> {focus.location}</p>
+            <p className="text-ice-100 font-medium mt-0.5 flex items-center gap-1">
+              <Ship className="w-3.5 h-3.5 text-cyan-400" /> {focus.location}
+            </p>
           </div>
           <div className="bg-ice-900/40 rounded-xl p-3 border border-ice-800/50">
             <p className="text-ice-500 text-[10px] uppercase tracking-wide">Progress</p>
@@ -60,16 +64,21 @@ export default function CargoTracking() {
           </div>
         </div>
 
-        {/* Route steps */}
         <div className="px-5 py-4">
-          <div className="relative flex justify-between min-w-0">
+          <div className="relative flex justify-between">
             <div className="absolute top-4 left-0 right-0 h-0.5 bg-ice-800" />
             <div className="absolute top-4 left-0 h-0.5 bg-gradient-to-r from-cyan-500 to-blue-400" style={{ width: '72%' }} />
             {['India Warehouse', 'Port', 'Ship', 'Antarctica', 'Maitri'].map((s, i) => (
               <div key={s} className="relative flex flex-col items-center z-[1] flex-1">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 text-[10px] ${
-                  i < 3 ? 'bg-cyan-500 border-cyan-400 text-white' : i === 3 ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300' : 'bg-ice-900 border-ice-600 text-ice-500'
-                }`}>
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+                    i < 3
+                      ? 'bg-cyan-500 border-cyan-400 text-white'
+                      : i === 3
+                        ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300'
+                        : 'bg-ice-900 border-ice-600 text-ice-500'
+                  }`}
+                >
                   {i === 2 ? <Ship className="w-3.5 h-3.5" /> : <MapPin className="w-3.5 h-3.5" />}
                 </div>
                 <p className="text-[10px] mt-1.5 text-ice-500 text-center leading-tight px-0.5">{s}</p>
@@ -79,7 +88,6 @@ export default function CargoTracking() {
         </div>
       </motion.div>
 
-      {/* Live map */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}

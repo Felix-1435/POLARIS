@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import PageHeader from '@/components/shared/PageHeader'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -236,6 +237,12 @@ export default function CargoScan() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
+      <PageHeader
+        title="Cargo Checkpoint Scanner"
+        subtitle="Select expedition & cargo · Role-based scan · Live sync"
+        backTo="/cargo"
+        backLabel="← Cargo & Logistics"
+      />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
