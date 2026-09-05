@@ -58,57 +58,60 @@ export default function CargoScan() {
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off) }
   }, [])
 
-  // Load expeditions
+  // Load expeditions (always fill dropdown — API empty → fallback)
   useEffect(() => {
     async function load() {
-      try {
-        if (API_URL) {
-          const res = await fetch(`${API_URL}/api/expeditions`)
-          if (res.ok) {
-            const data = await res.json()
-            setExpeditions(data)
-            if (data.length && !selectedExp) setSelectedExp(data[0].id)
-            return
-          }
-        }
-      } catch {}
-      // fallback
       const fallback = [
         { id: 'ANT-47', name: 'Antarctica Summer Expedition 2026', status: 'Active' },
         { id: 'ANT-46', name: 'Winter-over 2025-26', status: 'Completed' },
         { id: 'ARC-12', name: 'Arctic Climate Monitoring', status: 'Planning' },
       ]
+      try {
+        if (API_URL) {
+          const res = await fetch(`${API_URL}/api/expeditions`)
+          if (res.ok) {
+            const data = await res.json()
+            if (Array.isArray(data) && data.length > 0) {
+              setExpeditions(data)
+              setSelectedExp(prev => prev || data[0].id)
+              return
+            }
+          }
+        }
+      } catch {}
       setExpeditions(fallback)
-      setSelectedExp('ANT-47')
+      setSelectedExp(prev => prev || 'ANT-47')
     }
     load()
   }, [])
 
-  // Load cargo when expedition changes
+  // Load cargo when expedition changes (API empty → fallback list)
   useEffect(() => {
     if (!selectedExp) return
     async function loadCargo() {
-      try {
-        if (API_URL) {
-          const res = await fetch(`${API_URL}/api/expeditions/${selectedExp}/cargo`)
-          if (res.ok) {
-            const data = await res.json()
-            setCargoList(data)
-            if (data.length && !selectedCargoId) {
-              setSelectedCargoId(data[0].id)
-              setCargo(data[0])
-            }
-            return
-          }
-        }
-      } catch {}
-      // fallback
       const fallback = [
         { id: 'ANT-001', expedition_id: selectedExp, item: 'Satellite Communication Equipment', priority: 'Critical', weight: '420 kg', current_checkpoint: 0, status: 'Pending Dispatch', history: [] },
         { id: 'ANT-002', expedition_id: selectedExp, item: 'Diesel Fuel (20kL)', priority: 'Critical', weight: '20,000 L', current_checkpoint: 0, status: 'Pending Dispatch', history: [] },
         { id: 'ANT-003', expedition_id: selectedExp, item: 'Food Rations', priority: 'High', weight: '1,250 kg', current_checkpoint: 0, status: 'Pending Dispatch', history: [] },
         { id: 'ANT-004', expedition_id: selectedExp, item: 'Medical Kits', priority: 'Critical', weight: '85 kg', current_checkpoint: 0, status: 'Pending Dispatch', history: [] },
       ]
+      try {
+        if (API_URL) {
+          const res = await fetch(`${API_URL}/api/expeditions/${selectedExp}/cargo`)
+          if (res.ok) {
+            const data = await res.json()
+            if (Array.isArray(data) && data.length > 0) {
+              setCargoList(data)
+              setSelectedCargoId(prev => {
+                if (prev && data.some((c: any) => c.id === prev)) return prev
+                return data[0].id
+              })
+              setCargo(data[0])
+              return
+            }
+          }
+        }
+      } catch {}
       setCargoList(fallback)
       setSelectedCargoId(fallback[0].id)
       setCargo(fallback[0])
