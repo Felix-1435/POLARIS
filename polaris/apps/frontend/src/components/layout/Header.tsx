@@ -1,4 +1,4 @@
-import { Bell, Search, LogOut, Menu, CloudSnow, Thermometer } from 'lucide-react'
+import { Bell, Search, LogOut, Menu, Cloud, Thermometer } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 interface HeaderProps {
@@ -15,7 +15,7 @@ export default function Header({ user, onLogout, onMenuClick }: HeaderProps) {
           <Menu className="w-5 h-5" />
         </button>
         <div className="hidden sm:flex items-center gap-2 text-xs text-ice-400 bg-ice-900/50 px-3 py-1.5 rounded-full border border-ice-800">
-          <CloudSnow className="w-3.5 h-3.5 text-cyan-400" />
+          <Cloud className="w-3.5 h-3.5 text-cyan-400" />
           <span>Maitri: -22°C</span>
           <span className="text-ice-600">|</span>
           <Thermometer className="w-3.5 h-3.5 text-amber-400" />

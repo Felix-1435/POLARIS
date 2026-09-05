@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { AlertTriangle, Users, Clock, MapPin, Siren, Ambulance, Helicopter } from 'lucide-react'
+import { AlertTriangle, Users, Clock, MapPin, Heart, Plane } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function EmergencyDashboard() {
@@ -8,7 +8,7 @@ export default function EmergencyDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-ice-50 flex items-center gap-2">
-            <Siren className="w-6 h-6 text-red-400 animate-pulse" /> Emergency Response
+            <AlertTriangle className="w-6 h-6 text-red-400 animate-pulse" /> Emergency Response
           </h1>
           <p className="text-ice-500 text-sm">SOS, incidents, response teams & evacuation</p>
         </div>
@@ -54,10 +54,10 @@ export default function EmergencyDashboard() {
               <Users className="w-4 h-4" /> Assign / Update Team
             </button>
             <button className="w-full py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium flex items-center justify-center gap-2">
-              <Helicopter className="w-4 h-4" /> Start Evacuation
+              <Plane className="w-4 h-4" /> Start Evacuation
             </button>
             <button className="w-full py-2.5 rounded-lg bg-ice-700 hover:bg-ice-600 text-ice-200 text-sm font-medium flex items-center justify-center gap-2">
-              <Ambulance className="w-4 h-4" /> Notify Medical Facility
+              <Heart className="w-4 h-4" /> Notify Medical Facility
             </button>
             <button className="w-full py-2.5 rounded-lg border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 text-sm font-medium">
               Mark Resolved

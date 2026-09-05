@@ -1,5 +1,5 @@
 import { useRoute } from 'wouter'
-import { Users, Package, Fuel, Utensils, Heart, Wrench } from 'lucide-react'
+import { Users, Package, Droplet, Coffee, Heart, Wrench } from 'lucide-react'
 
 export default function ExpeditionDetail() {
   const [, params] = useRoute('/expeditions/:id')
@@ -13,8 +13,8 @@ export default function ExpeditionDetail() {
         {[
           { label: 'Personnel', value: '82/85', icon: Users, pct: 96 },
           { label: 'Cargo', value: '156/160', icon: Package, pct: 97 },
-          { label: 'Fuel', value: '84%', icon: Fuel, pct: 84 },
-          { label: 'Food', value: '91%', icon: Utensils, pct: 91 },
+          { label: 'Droplet', value: '84%', icon: Droplet, pct: 84 },
+          { label: 'Food', value: '91%', icon: Coffee, pct: 91 },
           { label: 'Medical', value: '100%', icon: Heart, pct: 100 },
           { label: 'Equipment', value: '94%', icon: Wrench, pct: 94 },
         ].map(r => (

@@ -2,7 +2,7 @@ import { Link, useLocation } from 'wouter'
 import { motion } from 'framer-motion'
 import { 
   LayoutDashboard, Map, Package, Boxes, Users, AlertTriangle, 
-  Bot, Settings, ChevronLeft, Snowflake, Ship, Radar
+  Bot, Settings, ChevronLeft, Snowflake, Ship, Activity
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -103,7 +103,7 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
         <div className="p-3 border-t border-ice-800/50">
           <div className="glass rounded-lg p-3 space-y-2">
             <div className="flex items-center gap-2 text-xs">
-              <Radar className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+              <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
               <span className="text-ice-400">System Status</span>
               <span className="ml-auto text-emerald-400 font-medium">ONLINE</span>
             </div>

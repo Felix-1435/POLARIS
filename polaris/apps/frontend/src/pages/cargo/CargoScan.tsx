@@ -1,8 +1,6 @@
-import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { 
   QrCode, CheckCircle2, Package, MapPin, Clock, User, 
-  ArrowRight, Ship, Warehouse, Anchor, Home, ScanLine
+  ArrowRight, Ship, Home, Search
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -11,8 +9,8 @@ import { cn } from '@/lib/utils'
 const CARGO_KEY = 'polaris_cargo_ant001'
 
 const checkpoints = [
-  { id: 1, name: 'India Warehouse', location: 'Goa, India', icon: Warehouse, statusKey: 'warehouse' },
-  { id: 2, name: 'Port Dispatch', location: 'Mormugao Port', icon: Anchor, statusKey: 'port' },
+  { id: 1, name: 'India Warehouse', location: 'Goa, India', icon: Package, statusKey: 'warehouse' },
+  { id: 2, name: 'Port Dispatch', location: 'Mormugao Port', icon: MapPin, statusKey: 'port' },
   { id: 3, name: 'Loaded on Ship', location: 'MV Sagar Kanya', icon: Ship, statusKey: 'ship' },
   { id: 4, name: 'Antarctica Arrival', location: 'Larsemann Hills', icon: MapPin, statusKey: 'antarctica' },
   { id: 5, name: 'Maitri Station', location: 'Maitri Research Station', icon: Home, statusKey: 'maitri' },
@@ -43,10 +41,10 @@ function saveCargo(data: typeof defaultCargo) {
   window.dispatchEvent(new Event('polaris-cargo-update'))
 }
 
-export default function CargoScan() {
+export default function CargoSearch() {
   const [cargo, setCargo] = useState(loadCargo)
-  const [scanning, setScanning] = useState(false)
-  const [scanSuccess, setScanSuccess] = useState(false)
+  const [scanning, setSearchning] = useState(false)
+  const [scanSuccess, setSearchSuccess] = useState(false)
   const [officer, setOfficer] = useState('Logistics Officer')
 
   // Listen for updates from other tabs/users
@@ -66,13 +64,13 @@ export default function CargoScan() {
   const nextCheckpoint = checkpoints[cargo.currentCheckpoint]
   const isComplete = cargo.currentCheckpoint >= checkpoints.length
 
-  const handleScan = () => {
+  const handleSearch = () => {
     if (isComplete) {
       toast.info('Cargo already fully delivered to Maitri')
       return
     }
-    setScanning(true)
-    setScanSuccess(false)
+    setSearchning(true)
+    setSearchSuccess(false)
 
     setTimeout(() => {
       const cp = checkpoints[cargo.currentCheckpoint]
@@ -89,12 +87,12 @@ export default function CargoScan() {
       }
       saveCargo(updated)
       setCargo(updated)
-      setScanning(false)
-      setScanSuccess(true)
+      setSearchning(false)
+      setSearchSuccess(true)
       toast.success(`✅ Confirmed: ${cp.name}`, {
         description: `${cargo.id} scanned at ${cp.location}`,
       })
-      setTimeout(() => setScanSuccess(false), 3000)
+      setTimeout(() => setSearchSuccess(false), 3000)
     }, 1800)
   }
 
@@ -108,8 +106,8 @@ export default function CargoScan() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-ice-50">Cargo Checkpoint Scanner</h1>
-          <p className="text-ice-500 text-sm">Multi-user live demo • Scan to advance progress</p>
+          <h1 className="text-2xl font-bold text-ice-50">Cargo Checkpoint Searchner</h1>
+          <p className="text-ice-500 text-sm">Multi-user live demo • Search to advance progress</p>
         </div>
         <button onClick={resetDemo} className="text-xs px-3 py-1.5 rounded-lg bg-ice-800 text-ice-400 hover:text-ice-200 border border-ice-700">
           Reset Demo
@@ -171,11 +169,11 @@ export default function CargoScan() {
         </div>
       </motion.div>
 
-      {/* Scanner Area */}
+      {/* Searchner Area */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className="glass rounded-xl border border-ice-800/50 p-6">
           <h3 className="font-semibold text-ice-100 mb-4 flex items-center gap-2">
-            <ScanLine className="w-4 h-4 text-cyan-400" /> Checkpoint Scanner
+            <Search className="w-4 h-4 text-cyan-400" /> Checkpoint Searchner
           </h3>
 
           {!isComplete ? (
@@ -213,7 +211,7 @@ export default function CargoScan() {
               </div>
 
               <div className="mb-4">
-                <label className="text-xs text-ice-500 block mb-1">Scanning Officer</label>
+                <label className="text-xs text-ice-500 block mb-1">Searchning Officer</label>
                 <select 
                   value={officer} 
                   onChange={e => setOfficer(e.target.value)}
@@ -229,7 +227,7 @@ export default function CargoScan() {
               </div>
 
               <button
-                onClick={handleScan}
+                onClick={handleSearch}
                 disabled={scanning}
                 className={cn(
                   "w-full py-3 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all",
@@ -241,11 +239,11 @@ export default function CargoScan() {
                 {scanning ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Scanning QR...
+                    Searchning QR...
                   </>
                 ) : (
                   <>
-                    <QrCode className="w-5 h-5" /> Confirm Scan & Advance
+                    <QrCode className="w-5 h-5" /> Confirm Search & Advance
                   </>
                 )}
               </button>
@@ -262,7 +260,7 @@ export default function CargoScan() {
         {/* History */}
         <div className="glass rounded-xl border border-ice-800/50 p-6">
           <h3 className="font-semibold text-ice-100 mb-4 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-cyan-400" /> Scan History
+            <Clock className="w-4 h-4 text-cyan-400" /> Search History
           </h3>
           {cargo.history.length === 0 ? (
             <p className="text-ice-600 text-sm text-center py-8">No scans yet. Be the first to confirm dispatch from India Warehouse.</p>
@@ -296,7 +294,7 @@ export default function CargoScan() {
 
       <div className="glass rounded-xl border border-amber-500/20 p-4 bg-amber-500/5">
         <p className="text-sm text-amber-200/90">
-          <strong>Demo Tip for Google Meet:</strong> Share this page. Each of the 6 team members selects a different officer role and clicks “Confirm Scan” in sequence. Everyone’s browser updates live within 2 seconds via shared localStorage + polling. Perfect for showing end-to-end cargo flow.
+          <strong>Demo Tip for Google Meet:</strong> Share this page. Each of the 6 team members selects a different officer role and clicks “Confirm Search” in sequence. Everyone’s browser updates live within 2 seconds via shared localStorage + polling. Perfect for showing end-to-end cargo flow.
         </p>
       </div>
     </div>
