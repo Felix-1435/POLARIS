@@ -12,6 +12,7 @@ import {
   isOnline, getGps, STATIONS, EMERGENCY_TYPES, SEVERITIES,
   OFFLINE_PROCEDURES, OFFLINE_CONTACTS, type EmergencyRecord,
 } from '@/lib/offlineEmergencies'
+import OfflineTileMap from '@/components/map/OfflineTileMap'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -330,35 +331,40 @@ export default function EmergencyDashboard() {
         </div>
       )}
 
-      {/* OFFLINE MAP */}
+      {/* OFFLINE MAP — full tiles via IndexedDB cache */}
       {tab === 'map' && (
         <div className="glass rounded-xl border border-ice-800/50 p-5 space-y-4">
           <div className="flex items-center gap-2">
             <Navigation className="w-5 h-5 text-cyan-400" />
-            <h3 className="font-semibold text-ice-100">Offline locations (preloaded)</h3>
+            <h3 className="font-semibold text-ice-100">Offline map (tile cache)</h3>
           </div>
-          <p className="text-xs text-ice-500">Station and camp coordinates stored on-device — no map tiles required.</p>
+          <p className="text-xs text-ice-500">
+            Download the offline pack once while online. Tiles are stored in IndexedDB on this device.
+            When offline, the map serves cached tiles only — stations and SOS pins still show.
+          </p>
+          <OfflineTileMap
+            height={440}
+            emergencies={localList
+              .filter(e => e.lat != null && e.lng != null)
+              .map(e => ({
+                id: e.id,
+                lat: e.lat as number,
+                lng: e.lng as number,
+                label: `${e.type} · ${e.location}`,
+                type: e.type,
+              }))}
+          />
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {STATIONS.map(s => (
-              <div key={s.id} className="rounded-xl border border-ice-800/50 bg-ice-900/40 p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <MapPin className={cn('w-4 h-4', s.type === 'station' ? 'text-emerald-400' : s.type === 'camp' ? 'text-amber-400' : 'text-cyan-400')} />
-                  <span className="font-medium text-ice-100 text-sm">{s.name}</span>
+              <div key={s.id} className="rounded-xl border border-ice-800/50 bg-ice-900/40 p-3">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <MapPin className={cn('w-3.5 h-3.5', s.type === 'station' ? 'text-emerald-400' : s.type === 'camp' ? 'text-amber-400' : 'text-cyan-400')} />
+                  <span className="font-medium text-ice-100 text-xs">{s.name}</span>
                 </div>
-                <p className="text-[11px] font-mono text-ice-500">{s.lat.toFixed(3)}, {s.lng.toFixed(3)}</p>
-                <p className="text-[10px] text-ice-600 uppercase mt-1">{s.type}</p>
+                <p className="text-[10px] font-mono text-ice-500">{s.lat.toFixed(3)}, {s.lng.toFixed(3)}</p>
               </div>
             ))}
           </div>
-          {localList.filter(e => e.lat != null).slice(0, 5).map(e => (
-            <div key={e.id} className="rounded-lg border border-red-500/30 bg-red-500/5 p-3 flex items-center gap-3">
-              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-              <div>
-                <p className="text-sm text-red-200">{e.id} emergency pin</p>
-                <p className="text-xs font-mono text-ice-500">{e.lat?.toFixed(4)}, {e.lng?.toFixed(4)} · {e.location}</p>
-              </div>
-            </div>
-          ))}
         </div>
       )}
 
