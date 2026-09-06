@@ -332,13 +332,15 @@ export default function CargoScan() {
                   {/* Simple QR using external API for reliability */}
                   <img
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(qrValue)}`}
-                    alt="Cargo QR"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                    referrerPolicy="no-referrer"
-                    alt="Cargo QR"
+                    alt="Cargo QR code"
                     width={160}
                     height={160}
                     className="rounded"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      const el = e.currentTarget
+                      el.style.display = 'none'
+                    }}
                   />
                 </div>
                 <div className="text-sm text-ice-300 space-y-1">

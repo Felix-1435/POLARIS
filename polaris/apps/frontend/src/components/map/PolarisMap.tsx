@@ -197,19 +197,19 @@ export default function PolarisMap({
         let size = 14
         let anchor = 7
         if (kind === 'camp') {
-          // diamond + label so camps stay visible near stations
-          size = 56
-          anchor = 12
-          html = `<div style="display:flex;flex-direction:column;align-items:center;transform:translateY(-8px)">
-            <div style="width:16px;height:16px;background:${color};border:2px solid #fff;transform:rotate(45deg);box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>
-            <div style="margin-top:6px;padding:1px 5px;border-radius:4px;background:rgba(2,6,23,.85);color:${color};font:700 9px/1.2 system-ui,sans-serif;white-space:nowrap;border:1px solid ${color}66">${m.label || 'Camp'}</div>
+          // Dot sits ON the lat/lng; label hangs below (does not shift the point)
+          size = 72
+          anchor = 9 // center of 18px diamond
+          html = `<div style="position:relative;width:72px;height:40px;left:-27px;top:-9px">
+            <div style="position:absolute;left:27px;top:1px;width:16px;height:16px;background:${color};border:2px solid #fff;transform:rotate(45deg);box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>
+            <div style="position:absolute;left:0;right:0;top:22px;text-align:center;padding:1px 4px;border-radius:4px;background:rgba(2,6,23,.9);color:${color};font:700 9px/1.2 system-ui,sans-serif;white-space:nowrap;border:1px solid ${color}66">${m.label || 'Camp'}</div>
           </div>`
         } else if (kind === 'station') {
-          size = 52
-          anchor = 10
-          html = `<div style="display:flex;flex-direction:column;align-items:center;transform:translateY(-6px)">
-            <div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 0 3px ${color}44"></div>
-            <div style="margin-top:4px;padding:1px 5px;border-radius:4px;background:rgba(2,6,23,.8);color:#e2e8f0;font:600 9px/1.2 system-ui,sans-serif;white-space:nowrap">${m.label || m.id}</div>
+          size = 72
+          anchor = 8 // center of 14px circle
+          html = `<div style="position:relative;width:72px;height:36px;left:-29px;top:-8px">
+            <div style="position:absolute;left:29px;top:1px;width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 0 3px ${color}55"></div>
+            <div style="position:absolute;left:0;right:0;top:20px;text-align:center;padding:1px 4px;border-radius:4px;background:rgba(2,6,23,.85);color:#e2e8f0;font:600 9px/1.2 system-ui,sans-serif;white-space:nowrap">${m.label || m.id}</div>
           </div>`
         } else if (kind === 'port' || kind === 'vessel') {
           size = 14
