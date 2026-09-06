@@ -19,34 +19,67 @@ export default function CargoTracking() {
 
   useEffect(() => {
     ;(async () => {
-      if (API_URL) {
-        try {
-          const res = await fetch(`${API_URL}/api/cargo`)
-          if (res.ok) {
-            const rows = await res.json()
-            if (Array.isArray(rows) && rows.length) {
-              setList(rows.map((r: any) => {
-                const hist = Array.isArray(r.history) ? r.history : []
-                const lastRoute = [...hist].reverse().find((h: any) => h && (h.routeId || h.type === 'route'))
-                const alt = lastRoute?.routeId === 'alternate' || String(r.status || '').toLowerCase().includes('alternate')
-                return {
-                  id: r.id,
-                  name: r.item || r.name || r.id,
-                  destination: r.destination || 'Maitri',
-                  status: String(r.status || '').includes('Deliver') ? 'Delivered'
-                    : String(r.status || '').includes('Delay') ? 'Delayed'
-                    : String(r.status || '').includes('Pending') ? 'Pending'
-                    : 'In Transit',
-                  progress: Math.min(100, Math.round(((Number(r.current_checkpoint) || 0) / 5) * 100)),
-                  routeId: (alt ? 'alternate' : 'primary') as 'primary' | 'alternate',
-                }
-              }))
-              return
-            }
-          }
-        } catch { /* offline */ }
+      const base = loadShipments()
+      if (!API_URL) {
+        setList(base)
+        return
       }
-      setList(loadShipments())
+      try {
+        const res = await fetch(`${API_URL}/api/cargo`)
+        if (!res.ok) {
+          setList(base)
+          return
+        }
+        const rows = await res.json()
+        if (!Array.isArray(rows) || !rows.length) {
+          setList(base)
+          return
+        }
+        const byId = new Map(rows.map((r: any) => [r.id, r]))
+        const merged = base.map(b => {
+          const r = byId.get(b.id)
+          if (!r) return b
+          const hist = Array.isArray(r.history) ? r.history : []
+          const lastRoute = [...hist].reverse().find((h: any) => h && (h.routeId || h.type === 'route'))
+          const alt = lastRoute?.routeId === 'alternate' || String(r.status || '').toLowerCase().includes('alternate')
+          const st = String(r.status || '')
+          return {
+            ...b,
+            destination: r.destination || b.destination,
+            status: (st.includes('Deliver') ? 'Delivered'
+              : st.includes('Delay') ? 'Delayed'
+              : st.includes('Pending') ? 'Pending'
+              : 'In Transit') as CargoShipment['status'],
+            progress: Math.min(100, Math.round(((Number(r.current_checkpoint) || 0) / 5) * 100)),
+            routeId: (alt ? 'alternate' : 'primary') as 'primary' | 'alternate',
+            weatherHold: st.includes('Delay'),
+          }
+        })
+        // only add non-pending extras
+        for (const r of rows) {
+          if (merged.some(m => m.id === r.id)) continue
+          const cp = Number(r.current_checkpoint) || 0
+          const st = String(r.status || '')
+          if (st.includes('Pending') && cp === 0) continue
+          const hist = Array.isArray(r.history) ? r.history : []
+          const lastRoute = [...hist].reverse().find((h: any) => h && (h.routeId || h.type === 'route'))
+          const alt = lastRoute?.routeId === 'alternate' || st.toLowerCase().includes('alternate')
+          merged.push({
+            id: r.id,
+            name: r.item || r.name || r.id,
+            destination: r.destination || 'Maitri',
+            status: (st.includes('Deliver') ? 'Delivered'
+              : st.includes('Delay') ? 'Delayed'
+              : st.includes('Pending') ? 'Pending'
+              : 'In Transit') as CargoShipment['status'],
+            progress: Math.min(100, Math.round((cp / 5) * 100)),
+            routeId: alt ? 'alternate' : 'primary',
+          })
+        }
+        setList(merged)
+      } catch {
+        setList(base)
+      }
     })()
   }, [])
 
