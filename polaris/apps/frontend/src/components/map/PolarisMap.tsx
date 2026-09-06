@@ -42,6 +42,8 @@ const DEFAULT_MARKERS: MapMarker[] = [
   { id: 'goa', lat: 15.4, lng: 73.8, label: 'Goa Port', kind: 'port', color: '#a78bfa' },
   { id: 'maitri', lat: -70.767, lng: 11.733, label: 'Maitri', kind: 'station', color: '#10b981' },
   { id: 'bharati', lat: -69.407, lng: 76.187, label: 'Bharati', kind: 'station', color: '#10b981' },
+  { id: 'camp-a', lat: -70.55, lng: 11.9, label: 'Field Camp A', kind: 'camp', color: '#f59e0b' },
+  { id: 'camp-b', lat: -70.82, lng: 11.45, label: 'Field Camp B', kind: 'camp', color: '#ef4444' },
 ]
 
 function loadL(): Promise<any> {

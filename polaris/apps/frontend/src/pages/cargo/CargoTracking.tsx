@@ -6,6 +6,7 @@ import PageHeader from '@/components/shared/PageHeader'
 import {
   loadShipments,
   applyAlternateRoute,
+  applyAlternateRouteAndSync,
   getWeatherAdvisories,
   type CargoShipment,
 } from '@/lib/cargoShipments'
@@ -24,17 +25,22 @@ export default function CargoTracking() {
           if (res.ok) {
             const rows = await res.json()
             if (Array.isArray(rows) && rows.length) {
-              setList(rows.map((r: any) => ({
-                id: r.id,
-                name: r.item || r.name || r.id,
-                destination: r.destination || 'Maitri',
-                status: String(r.status || '').includes('Deliver') ? 'Delivered'
-                  : String(r.status || '').includes('Delay') ? 'Delayed'
-                  : String(r.status || '').includes('Pending') ? 'Pending'
-                  : 'In Transit',
-                progress: Math.min(100, Math.round(((Number(r.current_checkpoint) || 0) / 5) * 100)),
-                routeId: 'primary' as const,
-              })))
+              setList(rows.map((r: any) => {
+                const hist = Array.isArray(r.history) ? r.history : []
+                const lastRoute = [...hist].reverse().find((h: any) => h && (h.routeId || h.type === 'route'))
+                const alt = lastRoute?.routeId === 'alternate' || String(r.status || '').toLowerCase().includes('alternate')
+                return {
+                  id: r.id,
+                  name: r.item || r.name || r.id,
+                  destination: r.destination || 'Maitri',
+                  status: String(r.status || '').includes('Deliver') ? 'Delivered'
+                    : String(r.status || '').includes('Delay') ? 'Delayed'
+                    : String(r.status || '').includes('Pending') ? 'Pending'
+                    : 'In Transit',
+                  progress: Math.min(100, Math.round(((Number(r.current_checkpoint) || 0) / 5) * 100)),
+                  routeId: (alt ? 'alternate' : 'primary') as 'primary' | 'alternate',
+                }
+              }))
               return
             }
           }
@@ -68,9 +74,10 @@ export default function CargoTracking() {
                   <button
                     key={id}
                     type="button"
-                    onClick={() => {
-                      setList(applyAlternateRoute(id))
-                      toast.success(`${id} → alternate route`)
+                    onClick={async () => {
+                      const next = await applyAlternateRouteAndSync(id, API_URL)
+                      setList(next)
+                      toast.success(`${id} → alternate route (synced)`)
                     }}
                     className="text-xs px-2.5 py-1.5 rounded-lg bg-cyan-600 text-white inline-flex items-center gap-1"
                   >

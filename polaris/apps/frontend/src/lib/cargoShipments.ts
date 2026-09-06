@@ -201,3 +201,37 @@ export function applyAlternateRoute(id: string): CargoShipment[] {
     status: 'In Transit',
   })
 }
+
+/** Switch to alternate route locally + sync to API so mobile/web share state */
+export async function applyAlternateRouteAndSync(
+  id: string,
+  apiUrl: string,
+): Promise<CargoShipment[]> {
+  const list = applyAlternateRoute(id)
+  if (!apiUrl || !navigator.onLine) return list
+  try {
+    const cur = await fetch(`${apiUrl}/api/cargo/${id}`)
+    if (!cur.ok) return list
+    const row = await cur.json()
+    const history = Array.isArray(row.history) ? [...row.history] : []
+    history.push({
+      type: 'route',
+      routeId: 'alternate',
+      name: 'Alternate western route',
+      time: new Date().toISOString(),
+      note: 'Weather divert — Cape approach corridor',
+    })
+    await fetch(`${apiUrl}/api/cargo/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        current_checkpoint: row.current_checkpoint ?? 0,
+        status: 'In Transit — Alternate route',
+        history,
+      }),
+    })
+  } catch {
+    /* offline ok — local already updated */
+  }
+  return list
+}
