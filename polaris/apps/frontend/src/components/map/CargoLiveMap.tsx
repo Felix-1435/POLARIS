@@ -1,15 +1,15 @@
+import { useEffect, useState } from 'react'
 import PolarisMap, { type MapMarker, type MapRoute } from './PolarisMap'
 import MapErrorBoundary from './MapErrorBoundary'
 import {
-  CARGO_SHIPMENTS,
   loadShipments,
   posOnRoute,
   routePathFor,
   alternateRoutePathFor,
   statusColor,
+  CARGO_SHIPMENTS,
   type CargoShipment,
 } from '@/lib/cargoShipments'
-import { useEffect, useState } from 'react'
 
 type Props = {
   items?: CargoShipment[]

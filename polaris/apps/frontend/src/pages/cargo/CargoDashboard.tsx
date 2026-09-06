@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ScanLine, ArrowRight, CloudLightning, Route, Wifi, WifiOff, RefreshCw } from 'lucide-react'
+import { ScanLine, ArrowRight, CloudLightning, Route, Wifi, WifiOff } from 'lucide-react'
 import { Link } from 'wouter'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import CargoLiveMap from '@/components/map/CargoLiveMap'
 import {
-  CARGO_SHIPMENTS,
   loadShipments,
   getWeatherAdvisories,
+  applyAlternateRoute,
   applyAlternateRouteAndSync,
   syncCargoQueue,
   getPendingSyncCount,
@@ -17,100 +17,14 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://polaris-api-ju9u.onrender.com'
 
-/** Merge API row onto curated shipment — keeps original cargo UI, live progress/status/route */
-function mapApiRow(r: any): CargoShipment {
-  const hist = Array.isArray(r.history) ? r.history : []
-  const lastRoute = [...hist].reverse().find((h: any) => h && (h.routeId || h.type === 'route'))
-  const alt =
-    lastRoute?.routeId === 'alternate' ||
-    String(r.status || '').toLowerCase().includes('alternate')
-  const st = String(r.status || '')
-  const status: CargoShipment['status'] = st.includes('Deliver')
-    ? 'Delivered'
-    : st.includes('Delay')
-      ? 'Delayed'
-      : st.includes('Pending')
-        ? 'Pending'
-        : 'In Transit'
-  return {
-    id: r.id,
-    name: r.item || r.name || r.id,
-    destination: r.destination || 'Maitri',
-    status,
-    progress: Math.min(100, Math.round(((Number(r.current_checkpoint) || 0) / 5) * 100)),
-    routeId: alt ? 'alternate' : 'primary',
-    weatherHold: status === 'Delayed',
-  }
-}
-
-/**
- * Keep original curated multi-route list look.
- * Overlay live API for same IDs; only add extra API rows if actively moving (not pure pending).
- */
-async function buildShipmentList(): Promise<CargoShipment[]> {
-  const base = loadShipments()
-  if (!API_URL || !navigator.onLine) return base
-
-  try {
-    const res = await fetch(`${API_URL}/api/cargo`)
-    if (!res.ok) return base
-    const rows = await res.json()
-    if (!Array.isArray(rows) || !rows.length) return base
-
-    const byId = new Map<string, any>()
-    for (const r of rows) byId.set(r.id, r)
-
-    // Overlay API onto curated / offline list
-    const merged = base.map(b => {
-      const r = byId.get(b.id)
-      if (!r) return b
-      const live = mapApiRow(r)
-      return {
-        ...b,
-        ...live,
-        name: b.name || live.name, // keep familiar names when possible
-        destination: live.destination || b.destination,
-      }
-    })
-
-    // Add active API shipments not in base (in transit / delayed / delivered with progress)
-    for (const r of rows) {
-      if (merged.some(m => m.id === r.id)) continue
-      const live = mapApiRow(r)
-      const cp = Number(r.current_checkpoint) || 0
-      if (live.status === 'Pending' && cp === 0) continue // skip pure pending noise
-      merged.push(live)
-    }
-
-    // Prefer offline queue patches
-    try {
-      const raw = localStorage.getItem('polaris_cargo_offline_v1')
-      if (raw) {
-        const offline = JSON.parse(raw) as CargoShipment[]
-        for (const o of offline) {
-          const i = merged.findIndex(m => m.id === o.id)
-          if (i >= 0 && o.routeId === 'alternate') {
-            merged[i] = { ...merged[i], routeId: 'alternate', weatherHold: false, status: 'In Transit' }
-          }
-        }
-      }
-    } catch { /* */ }
-
-    return merged
-  } catch {
-    return base
-  }
-}
-
 export default function CargoDashboard() {
-  const [list, setList] = useState<CargoShipment[]>(CARGO_SHIPMENTS.map(c => ({ ...c })))
+  const [list, setList] = useState<CargoShipment[]>([])
   const [online, setOnline] = useState(true)
   const [pending, setPending] = useState(0)
 
-  const refresh = async () => {
+  const refresh = () => {
+    setList(loadShipments())
     setPending(getPendingSyncCount())
-    const next = await buildShipmentList()
-    setList(next)
   }
 
   useEffect(() => {
@@ -131,17 +45,60 @@ export default function CargoDashboard() {
     }
   }, [])
 
+  // Light live overlay: update progress/status for IDs that exist in API (does not replace list)
+  useEffect(() => {
+    if (!API_URL || !navigator.onLine) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/cargo`)
+        if (!res.ok) return
+        const rows = await res.json()
+        if (!Array.isArray(rows) || cancelled) return
+        setList(prev => {
+          if (!prev.length) return loadShipments()
+          return prev.map(b => {
+            const r = rows.find((x: any) => x.id === b.id)
+            if (!r) return b
+            const hist = Array.isArray(r.history) ? r.history : []
+            const lastRoute = [...hist].reverse().find((h: any) => h && (h.routeId || h.type === 'route'))
+            const alt =
+              b.routeId === 'alternate' ||
+              lastRoute?.routeId === 'alternate' ||
+              String(r.status || '').toLowerCase().includes('alternate')
+            const st = String(r.status || '')
+            return {
+              ...b,
+              progress: Math.min(100, Math.round(((Number(r.current_checkpoint) || 0) / 5) * 100)),
+              status: (st.includes('Deliver')
+                ? 'Delivered'
+                : st.includes('Delay')
+                  ? 'Delayed'
+                  : st.includes('Pending')
+                    ? 'Pending'
+                    : 'In Transit') as CargoShipment['status'],
+              routeId: alt ? 'alternate' : b.routeId || 'primary',
+              weatherHold: st.includes('Delay') || b.weatherHold,
+            }
+          })
+        })
+      } catch { /* keep local list */ }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
   const advisories = getWeatherAdvisories(list)
   const recent = list
 
   const setAlt = async (id: string) => {
-    const next = await applyAlternateRouteAndSync(id, API_URL)
-    // rebuild so map + list stay consistent
-    const rebuilt = await buildShipmentList()
-    // ensure alt flag sticks from offline list
-    const withAlt = rebuilt.map(c => (c.id === id ? { ...c, routeId: 'alternate' as const, status: 'In Transit' as const, weatherHold: false } : c))
-    setList(withAlt.length ? withAlt : next)
-    toast.success(`${id} → alternate route (synced to API)`)
+    try {
+      const next = await applyAlternateRouteAndSync(id, API_URL)
+      setList(next)
+      toast.success(`${id} switched to alternate weather route`)
+    } catch {
+      setList(applyAlternateRoute(id))
+      toast.success(`${id} switched to alternate weather route (local)`)
+    }
     setPending(getPendingSyncCount())
   }
 
@@ -169,13 +126,6 @@ export default function CargoDashboard() {
               {pending} pending sync
             </span>
           )}
-          <button
-            type="button"
-            onClick={() => refresh()}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-ice-700 text-ice-300 text-sm hover:bg-ice-800/50"
-          >
-            <RefreshCw className="w-3.5 h-3.5" /> Refresh
-          </button>
           <Link href="/cargo/scan">
             <a className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-ice-700 text-ice-300 text-sm hover:bg-ice-800/50">
               <ScanLine className="w-4 h-4" /> Scan Cargo
@@ -227,12 +177,12 @@ export default function CargoDashboard() {
         </div>
       ))}
 
-      {/* Multi-route live map — original look */}
+      {/* Original multi-route operational map */}
       <div className="glass rounded-2xl border border-ice-800/50 overflow-hidden">
         <div className="px-5 py-3 border-b border-ice-800/50 flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-ice-100">Operational sealift map</p>
-            <p className="text-xs text-ice-500">Multi-route · Goa → Maitri / Bharati · camps · live cargo</p>
+            <p className="text-sm font-semibold text-ice-100">Live corridor map</p>
+            <p className="text-xs text-ice-500">Multi-route sealift · weather diversions</p>
           </div>
           <Link href="/cargo/tracking">
             <a className="text-xs text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1">
@@ -243,11 +193,9 @@ export default function CargoDashboard() {
         <CargoLiveMap items={list} />
       </div>
 
-      {/* Recent shipments — curated + live overlay */}
       <div className="glass rounded-2xl border border-ice-800/50 overflow-hidden">
-        <div className="px-5 py-3 border-b border-ice-800/50 flex items-center justify-between">
+        <div className="px-5 py-3 border-b border-ice-800/50">
           <p className="text-sm font-semibold text-ice-100">Recent shipments</p>
-          <span className="text-[10px] text-ice-500">Live API when online</span>
         </div>
         <div className="divide-y divide-ice-800/40">
           {recent.map((c, i) => (
