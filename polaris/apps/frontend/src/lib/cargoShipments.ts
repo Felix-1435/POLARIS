@@ -21,18 +21,51 @@ export const CARGO_SHIPMENTS: CargoShipment[] = [
   { id: 'ANT-045', name: 'Weather Sensors', destination: 'Field Camp A', status: 'In Transit', progress: 70, routeId: 'primary' },
 ]
 
-const STORE_KEY = 'polaris_cargo_offline_v1'
-const QUEUE_KEY = 'polaris_cargo_sync_queue_v1'
+const STORE_KEY = 'polaris_cargo_offline_v3'
+const QUEUE_KEY = 'polaris_cargo_sync_queue_v3'
 
+/** Load curated list; always ensure delivered rows exist; only one Pending */
 export function loadShipments(): CargoShipment[] {
+  const seed = CARGO_SHIPMENTS.map(c => ({ ...c }))
   try {
     const raw = localStorage.getItem(STORE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as CargoShipment[]
-      if (Array.isArray(parsed) && parsed.length) return parsed
+      if (Array.isArray(parsed) && parsed.length) {
+        const byId = new Map(parsed.map(c => [c.id, c]))
+        // Start from seed order so Delivered (ANT-003) is never dropped
+        const merged = seed.map(s => {
+          const o = byId.get(s.id)
+          if (!o) return s
+          // Keep seed Delivered if offline patch wrongly cleared it
+          if (s.status === 'Delivered' && o.status !== 'Delivered' && (o.progress ?? 0) < 100) {
+            return { ...s, routeId: o.routeId || s.routeId }
+          }
+          return {
+            ...s,
+            ...o,
+            name: o.name || s.name,
+            destination: o.destination || s.destination,
+          }
+        })
+        // Enforce only one Pending: prefer ANT-004; others become In Transit at low progress
+        let pendingSeen = false
+        return merged.map(c => {
+          if (c.status !== 'Pending') return c
+          if (!pendingSeen && c.id === 'ANT-004') {
+            pendingSeen = true
+            return c
+          }
+          if (!pendingSeen) {
+            pendingSeen = true
+            return c
+          }
+          return { ...c, status: 'In Transit' as const, progress: Math.max(c.progress, 15) }
+        })
+      }
     }
   } catch { /* */ }
-  return CARGO_SHIPMENTS.map(c => ({ ...c }))
+  return seed
 }
 
 export function saveShipments(list: CargoShipment[]) {
