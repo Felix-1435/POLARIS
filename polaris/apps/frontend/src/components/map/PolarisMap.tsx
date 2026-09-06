@@ -42,8 +42,8 @@ const DEFAULT_MARKERS: MapMarker[] = [
   { id: 'goa', lat: 15.4, lng: 73.8, label: 'Goa Port', kind: 'port', color: '#a78bfa' },
   { id: 'maitri', lat: -70.767, lng: 11.733, label: 'Maitri', kind: 'station', color: '#10b981' },
   { id: 'bharati', lat: -69.407, lng: 76.187, label: 'Bharati', kind: 'station', color: '#10b981' },
-  { id: 'camp-a', lat: -70.55, lng: 11.9, label: 'Field Camp A', kind: 'camp', color: '#f59e0b' },
-  { id: 'camp-b', lat: -70.82, lng: 11.45, label: 'Field Camp B', kind: 'camp', color: '#ef4444' },
+  { id: 'camp-a', lat: -70.35, lng: 13.2, label: 'Field Camp A', kind: 'camp', color: '#f59e0b' },
+  { id: 'camp-b', lat: -71.05, lng: 9.8, label: 'Field Camp B', kind: 'camp', color: '#ef4444' },
 ]
 
 function loadL(): Promise<any> {
@@ -192,13 +192,43 @@ export default function PolarisMap({
       pins.forEach(m => {
         if (m?.lat == null || m?.lng == null) return
         const color = m.color || '#22d3ee'
+        const kind = m.kind || 'default'
+        let html = ''
+        let size = 14
+        let anchor = 7
+        if (kind === 'camp') {
+          // diamond + label so camps stay visible near stations
+          size = 56
+          anchor = 12
+          html = `<div style="display:flex;flex-direction:column;align-items:center;transform:translateY(-8px)">
+            <div style="width:16px;height:16px;background:${color};border:2px solid #fff;transform:rotate(45deg);box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>
+            <div style="margin-top:6px;padding:1px 5px;border-radius:4px;background:rgba(2,6,23,.85);color:${color};font:700 9px/1.2 system-ui,sans-serif;white-space:nowrap;border:1px solid ${color}66">${m.label || 'Camp'}</div>
+          </div>`
+        } else if (kind === 'station') {
+          size = 52
+          anchor = 10
+          html = `<div style="display:flex;flex-direction:column;align-items:center;transform:translateY(-6px)">
+            <div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 0 3px ${color}44"></div>
+            <div style="margin-top:4px;padding:1px 5px;border-radius:4px;background:rgba(2,6,23,.8);color:#e2e8f0;font:600 9px/1.2 system-ui,sans-serif;white-space:nowrap">${m.label || m.id}</div>
+          </div>`
+        } else if (kind === 'port' || kind === 'vessel') {
+          size = 14
+          anchor = 7
+          html = `<div style="width:12px;height:12px;border-radius:3px;background:${color};border:2px solid #fff"></div>`
+        } else if (kind === 'cargo') {
+          size = 14
+          anchor = 7
+          html = `<div style="width:11px;height:11px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 6px ${color}"></div>`
+        } else {
+          html = `<div style="width:12px;height:12px;border-radius:50%;background:${color};border:2px solid #fff"></div>`
+        }
         const icon = L.divIcon({
-          className: '',
-          html: `<div style="width:12px;height:12px;border-radius:50%;background:${color};border:2px solid #fff"></div>`,
-          iconSize: [12, 12],
-          iconAnchor: [6, 6],
+          className: 'polaris-map-pin',
+          html,
+          iconSize: [size, size],
+          iconAnchor: [anchor, anchor],
         })
-        L.marker([m.lat, m.lng], { icon })
+        L.marker([m.lat, m.lng], { icon, zIndexOffset: kind === 'camp' ? 600 : kind === 'station' ? 500 : 0 })
           .bindPopup(`<b>${m.label || m.id}</b>${m.sub ? `<br/>${m.sub}` : ''}`)
           .addTo(group)
       })

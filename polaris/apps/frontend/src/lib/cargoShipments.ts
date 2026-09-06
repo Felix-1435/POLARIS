@@ -115,8 +115,8 @@ export async function syncCargoQueue(apiUrl: string): Promise<number> {
 export const DEST_COORDS: Record<string, { lat: number; lng: number }> = {
   Maitri: { lat: -70.767, lng: 11.733 },
   Bharati: { lat: -69.407, lng: 76.187 },
-  'Field Camp A': { lat: -70.55, lng: 11.9 },
-  'Field Camp B': { lat: -70.82, lng: 11.45 },
+  'Field Camp A': { lat: -70.35, lng: 13.2 },
+  'Field Camp B': { lat: -71.05, lng: 9.8 },
 }
 
 export function routePathFor(dest: string): [number, number][] {
