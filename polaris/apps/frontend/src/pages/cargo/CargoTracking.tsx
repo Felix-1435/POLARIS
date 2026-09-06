@@ -10,12 +10,38 @@ import {
   type CargoShipment,
 } from '@/lib/cargoShipments'
 
+const API_URL = import.meta.env.VITE_API_URL || 'https://polaris-api-ju9u.onrender.com'
+
 export default function CargoTracking() {
   const [list, setList] = useState<CargoShipment[]>([])
   const focus = list.find(c => c.id === 'ANT-001') || list[0]
 
   useEffect(() => {
-    setList(loadShipments())
+    ;(async () => {
+      if (API_URL) {
+        try {
+          const res = await fetch(`${API_URL}/api/cargo`)
+          if (res.ok) {
+            const rows = await res.json()
+            if (Array.isArray(rows) && rows.length) {
+              setList(rows.map((r: any) => ({
+                id: r.id,
+                name: r.item || r.name || r.id,
+                destination: r.destination || 'Maitri',
+                status: String(r.status || '').includes('Deliver') ? 'Delivered'
+                  : String(r.status || '').includes('Delay') ? 'Delayed'
+                  : String(r.status || '').includes('Pending') ? 'Pending'
+                  : 'In Transit',
+                progress: Math.min(100, Math.round(((Number(r.current_checkpoint) || 0) / 5) * 100)),
+                routeId: 'primary' as const,
+              })))
+              return
+            }
+          }
+        } catch { /* offline */ }
+      }
+      setList(loadShipments())
+    })()
   }, [])
 
   const advisories = getWeatherAdvisories(list)

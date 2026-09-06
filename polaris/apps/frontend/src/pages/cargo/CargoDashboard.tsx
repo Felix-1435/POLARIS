@@ -21,9 +21,36 @@ export default function CargoDashboard() {
   const [online, setOnline] = useState(true)
   const [pending, setPending] = useState(0)
 
-  const refresh = () => {
-    setList(loadShipments())
+  const refresh = async () => {
     setPending(getPendingSyncCount())
+    // Prefer live API cargo when available
+    if (API_URL && navigator.onLine) {
+      try {
+        const res = await fetch(`${API_URL}/api/cargo`)
+        if (res.ok) {
+          const rows = await res.json()
+          if (Array.isArray(rows) && rows.length) {
+            const mapped = rows.map((r: any) => ({
+              id: r.id,
+              name: r.item || r.name || r.id,
+              destination: r.destination || 'Maitri',
+              status: String(r.status || 'Pending').includes('Deliver')
+                ? 'Delivered'
+                : String(r.status || '').includes('Delay')
+                  ? 'Delayed'
+                  : String(r.status || '').includes('Pending')
+                    ? 'Pending'
+                    : 'In Transit',
+              progress: Math.min(100, Math.round(((Number(r.current_checkpoint) || 0) / 5) * 100)),
+              routeId: 'primary' as const,
+            }))
+            setList(mapped)
+            return
+          }
+        }
+      } catch { /* fall through */ }
+    }
+    setList(loadShipments())
   }
 
   useEffect(() => {
