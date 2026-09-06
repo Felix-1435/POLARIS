@@ -157,8 +157,8 @@ export default function CargoDashboard() {
           <div className="flex gap-3">
             <CloudLightning className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm font-semibold text-ice-100">Weather advisory · alternate routes</p>
-              <p className="text-xs text-ice-400 mt-1">{a.area} · {a.condition}</p>
+              <p className="text-sm font-semibold text-ice-100">AI weather plan · {a.area}</p>
+              <p className="text-xs text-ice-400 mt-1">{a.condition}</p>
               <p className="text-sm text-ice-200 mt-2">{a.recommendation}</p>
               <div className="flex flex-wrap gap-2 mt-3">
                 {a.affectedIds.map(id => (
@@ -168,7 +168,7 @@ export default function CargoDashboard() {
                     onClick={() => setAlt(id)}
                     className="text-xs px-2.5 py-1.5 rounded-lg bg-cyan-600 text-white inline-flex items-center gap-1"
                   >
-                    <Route className="w-3 h-3" /> {id} → alternate
+                    <Route className="w-3 h-3" /> Set alternate route · {id}
                   </button>
                 ))}
               </div>
@@ -194,8 +194,13 @@ export default function CargoDashboard() {
       </div>
 
       <div className="glass rounded-2xl border border-ice-800/50 overflow-hidden">
-        <div className="px-5 py-3 border-b border-ice-800/50">
-          <p className="text-sm font-semibold text-ice-100">Recent shipments</p>
+        <div className="px-5 py-3 border-b border-ice-800/50 flex items-center justify-between">
+          <p className="text-sm font-semibold text-ice-100">Recent Shipments</p>
+          <Link href="/cargo/tracking">
+            <a className="text-xs text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1">
+              View all <ArrowRight className="w-3 h-3" />
+            </a>
+          </Link>
         </div>
         <div className="divide-y divide-ice-800/40">
           {recent.map((c, i) => (
@@ -204,35 +209,39 @@ export default function CargoDashboard() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
-              className="px-5 py-3 flex flex-wrap items-center gap-3 text-sm"
+              className="px-5 py-3.5 grid grid-cols-[5.5rem_1fr_auto_auto_7rem] gap-x-4 items-center text-sm max-sm:grid-cols-1 max-sm:gap-2"
             >
-              <span className="font-mono text-cyan-400 text-xs w-16">{c.id}</span>
-              <span className="text-ice-100 flex-1 min-w-[120px]">{c.name}</span>
-              <span className="text-xs text-ice-500">{c.destination}</span>
+              <span className="font-mono text-cyan-400 text-xs tracking-wide">{c.id}</span>
+              <span className="text-ice-100 font-medium truncate">{c.name}</span>
+              <span className="text-xs text-ice-500 whitespace-nowrap">{c.destination}</span>
               <span
                 className={cn(
-                  'text-[10px] px-2 py-0.5 rounded-full border font-medium',
-                  c.status === 'Delivered' && 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-                  c.status === 'Delayed' && 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-                  c.status === 'In Transit' && 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
-                  c.status === 'Pending' && 'bg-ice-800 text-ice-400 border-ice-700',
+                  'text-[10px] px-2.5 py-1 rounded-full font-medium whitespace-nowrap',
+                  c.status === 'Delivered' && 'bg-emerald-600/90 text-white',
+                  c.status === 'Delayed' && 'bg-amber-600/90 text-white',
+                  c.status === 'In Transit' && 'bg-cyan-600/90 text-white',
+                  c.status === 'Pending' && 'bg-ice-700 text-ice-300',
                 )}
               >
                 {c.status}
               </span>
-              <span className="text-xs text-ice-500 w-10 text-right">{c.progress}%</span>
-              {c.routeId === 'alternate' && (
-                <span className="text-[10px] text-violet-300 border border-violet-500/30 px-1.5 py-0.5 rounded">ALT</span>
-              )}
-              {(c.status === 'Delayed' || c.weatherHold) && c.routeId !== 'alternate' && (
-                <button
-                  type="button"
-                  onClick={() => setAlt(c.id)}
-                  className="text-[10px] px-2 py-1 rounded-lg bg-violet-600/80 text-white"
-                >
-                  Alt route
-                </button>
-              )}
+              <div className="flex items-center gap-2 min-w-[7rem]">
+                <div className="flex-1 h-1.5 rounded-full bg-ice-800 overflow-hidden">
+                  <div
+                    className={cn(
+                      'h-full rounded-full transition-all',
+                      c.status === 'Delivered' && 'bg-emerald-400',
+                      c.status === 'Delayed' && 'bg-amber-400',
+                      c.status === 'In Transit' && 'bg-cyan-400',
+                      c.status === 'Pending' && 'bg-ice-500',
+                    )}
+                    style={{ width: `${Math.min(100, c.progress)}%` }}
+                  />
+                </div>
+                {c.routeId === 'alternate' && (
+                  <span className="text-[9px] text-violet-300 border border-violet-500/40 px-1 rounded">ALT</span>
+                )}
+              </div>
             </motion.div>
           ))}
         </div>

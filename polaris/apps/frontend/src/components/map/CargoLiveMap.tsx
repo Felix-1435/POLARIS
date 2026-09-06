@@ -60,6 +60,18 @@ export default function CargoLiveMap({ items, highlightId, compact }: Props) {
       }),
     ]
     const seen = new Set<string>()
+    // Always show primary corridors to Maitri and Bharati
+    for (const dest of ['Maitri', 'Bharati']) {
+      const key = `p-${dest}`
+      seen.add(key)
+      routes.push({
+        id: key,
+        path: routePathFor(dest),
+        color: dest === 'Bharati' ? '#38bdf8' : '#22d3ee',
+        dashed: true,
+        weight: 2,
+      })
+    }
     for (const c of active) {
       const alt = c.routeId === 'alternate'
       const key = `${alt ? 'a' : 'p'}-${c.destination}`
