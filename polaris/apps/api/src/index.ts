@@ -258,25 +258,19 @@ app.post('/api/expeditions', async (req, res) => {
         `INSERT INTO expeditions (id, name, status, region, personnel, start_date, end_date, objective)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
          ON CONFLICT (id) DO UPDATE SET
-           name = EXCLUDED.name,
-           status = EXCLUDED.status,
-           region = EXCLUDED.region,
-           personnel = EXCLUDED.personnel,
-           start_date = EXCLUDED.start_date,
-           end_date = EXCLUDED.end_date,
-           objective = EXCLUDED.objective`,
+           name=EXCLUDED.name, status=EXCLUDED.status, region=EXCLUDED.region,
+           personnel=EXCLUDED.personnel, start_date=EXCLUDED.start_date,
+           end_date=EXCLUDED.end_date, objective=EXCLUDED.objective`,
         [row.id, row.name, row.status, row.region, row.personnel, row.start_date, row.end_date, row.objective]
       )
       const { rows } = await pool.query('SELECT * FROM expeditions WHERE id=$1', [row.id])
       return res.status(201).json(rows[0])
     }
-    const existing = mem.expeditions.findIndex((e: any) => e.id === row.id)
-    if (existing >= 0) mem.expeditions[existing] = { ...mem.expeditions[existing], ...row }
+    const i = mem.expeditions.findIndex((e: any) => e.id === row.id)
+    if (i >= 0) mem.expeditions[i] = { ...mem.expeditions[i], ...row }
     else mem.expeditions.unshift(row)
     res.status(201).json(row)
-  } catch (e: any) {
-    res.status(500).json({ error: e.message })
-  }
+  } catch (e: any) { res.status(500).json({ error: e.message }) }
 })
 
 app.get('/api/expeditions/:id/cargo', async (req, res) => {

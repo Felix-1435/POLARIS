@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import PageHeader from '@/components/shared/PageHeader'
 
-const API_URL = import.meta.env.VITE_API_URL || ''
+const API_URL = import.meta.env.VITE_API_URL || 'https://polaris-api-ju9u.onrender.com'
 
 const ROLES = [
   { id: 'india_warehouse', label: 'India Warehouse Officer', location: 'Goa Warehouse, India', checkpoint: 0 },

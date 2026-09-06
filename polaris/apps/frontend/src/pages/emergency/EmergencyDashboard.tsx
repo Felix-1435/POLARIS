@@ -14,7 +14,7 @@ import {
 } from '@/lib/offlineEmergencies'
 import OfflineTileMap from '@/components/map/OfflineTileMap'
 
-const API_URL = import.meta.env.VITE_API_URL || ''
+const API_URL = import.meta.env.VITE_API_URL || 'https://polaris-api-ju9u.onrender.com'
 
 export default function EmergencyDashboard() {
   const { user } = useAuth()

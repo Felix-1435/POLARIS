@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Bot, Send, Sparkles, Wifi, WifiOff, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const API_URL = import.meta.env.VITE_API_URL || ''
+const API_URL = import.meta.env.VITE_API_URL || 'https://polaris-api-ju9u.onrender.com'
 
 const SUGGESTIONS = [
   'Which critical cargo is currently delayed?',

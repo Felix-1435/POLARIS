@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Calendar, Users, Package, Fuel, Heart, Wrench, Sparkles, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 
-const API_URL = import.meta.env.VITE_API_URL || ''
+const API_URL = import.meta.env.VITE_API_URL || 'https://polaris-api-ju9u.onrender.com'
 
 export default function MissionPlanner() {
   const [teamSize, setTeamSize] = useState(40)

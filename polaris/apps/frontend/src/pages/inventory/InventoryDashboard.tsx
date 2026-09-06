@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/App'
 
-const API_URL = import.meta.env.VITE_API_URL || ''
+const API_URL = import.meta.env.VITE_API_URL || 'https://polaris-api-ju9u.onrender.com'
 
 const CATEGORIES = ['Fuel', 'Food', 'Medical', 'Spares', 'Scientific Equipment', 'Miscellaneous'] as const
 const LOCATIONS = ['Maitri', 'Bharati', 'Field Camp A', 'Field Camp B', 'Himalaya'] as const
